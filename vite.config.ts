@@ -21,9 +21,7 @@ export default defineConfig(() => {
       strictPort: true,
     },
     build: {
-      watch: {
-        exclude: ['src-tauri/**'],
-      },
+      watch: null,
     },
   };
 });
