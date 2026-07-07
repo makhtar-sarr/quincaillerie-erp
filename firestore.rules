@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidBackup(backup) {
+      return backup.keys().hasAll(['createdAt', 'label', 'operator', 'data'])
+        && backup.keys().size() == 4
+        && backup.createdAt is string
+        && backup.createdAt.size() <= 100
+        && backup.label is string
+        && backup.label.size() <= 150
+        && backup.operator is string
+        && backup.operator.size() <= 100
+        && backup.data is map
+        && backup.data.keys().hasAll(['settings', 'items', 'movements', 'customers', 'suppliers', 'quotes', 'invoices'])
+        && backup.data.keys().size() == 7
+        && (backup.data.settings == null || backup.data.settings is map)
+        && backup.data.items is list
+        && backup.data.movements is list
+        && backup.data.customers is list
+        && backup.data.suppliers is list
+        && backup.data.quotes is list
+        && backup.data.invoices is list;
+    }
+
+    // Backups collection
+    match /backups/{backupId} {
+      // Validate document ID on single-document targets
+      allow get: if isValidId(backupId);
+      allow create: if isValidId(backupId) && isValidBackup(incoming());
+      allow delete: if isValidId(backupId);
+
+      // List query
+      allow list: if true;
+
+      // Updates are forbidden for immutable backups
+      allow update: if false;
+    }
+  }
+}

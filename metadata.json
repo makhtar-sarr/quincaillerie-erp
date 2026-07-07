@@ -1,0 +1,6 @@
+{
+  "name": "Quincaillerie ERP",
+  "description": "Système de gestion complet pour quincailleries sénégalaises : suivi des stocks, ventes, devis, facturation (FCFA, Wave, Orange Money) et annuaire clients/fournisseurs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

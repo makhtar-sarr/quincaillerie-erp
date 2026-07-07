@@ -1,0 +1,23 @@
+{
+  "active_plan": "/home/makhtar/projets/quincaillerie-erp/.sisyphus/plans/tauri-desktop-integration.md",
+  "started_at": "2026-07-07T12:29:36.427Z",
+  "session_ids": [
+    "ses_0c37913dfffeYVPyAZB4WvQHE2"
+  ],
+  "session_origins": {
+    "ses_0c37913dfffeYVPyAZB4WvQHE2": "direct"
+  },
+  "plan_name": "tauri-desktop-integration",
+  "agent": "atlas",
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "Initialize Git Repository",
+      "session_id": "ses_0c3713034ffeiHK2O76pyAYMdW",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-07-07T12:31:00.948Z"
+    }
+  }
+}
