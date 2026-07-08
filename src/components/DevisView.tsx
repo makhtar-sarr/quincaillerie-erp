@@ -23,6 +23,8 @@ import {
 import { Quote, Item, Customer } from '../types';
 import { formatFCFA } from '../utils/data';
 import { useQuoteForm } from '../hooks/useQuoteForm';
+import { Modal } from './ui/Modal';
+import { Button } from './ui/Button';
 
 interface DevisViewProps {
   quotes: Quote[];
@@ -126,38 +128,40 @@ export default function DevisView({
       `}</style>
 
       {/* Main View Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b-2 border-slate-100 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b-2 border-border pb-5">
         <div>
-          <h2 className="text-xl font-black font-display text-slate-900 uppercase tracking-wide">Dévis & Proformas</h2>
-          <p className="text-xs text-slate-500 mt-1 font-semibold">Créez des propositions tarifaires détaillées et convertissez-les en factures de vente d'un clic</p>
+          <h2 className="text-xl font-black font-display text-foreground uppercase tracking-wide">Dévis & Proformas</h2>
+          <p className="text-xs text-muted mt-1 font-semibold">Créez des propositions tarifaires détaillées et convertissez-les en factures de vente d'un clic</p>
         </div>
-        <button
+        <Button
+          variant="primary"
+          size="lg"
           onClick={() => setIsCreateOpen(true)}
-          className="bg-amber-500 hover:bg-amber-600 text-slate-950 px-5 py-3 rounded-2xl text-xs font-black flex items-center space-x-2 cursor-pointer mt-4 sm:mt-0 self-start transition-all hover:scale-[1.02] shadow-sm uppercase tracking-wider font-display"
+          className="flex items-center space-x-2 mt-4 sm:mt-0 self-start uppercase tracking-wider font-display font-black"
         >
           <Plus className="h-4.5 w-4.5 stroke-[3]" />
           <span>Faire un Dévis</span>
-        </button>
+        </Button>
       </div>
 
       {/* Search and filter bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-white p-5 rounded-[2rem] border-2 border-slate-100 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-surface p-5 rounded-[2rem] border-2 border-border shadow-xs">
         <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400 stroke-[2.5]" />
+          <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-muted stroke-[2.5]" />
           <input
             type="text"
             placeholder="Rechercher par N° de dévis ou client..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 pr-4 py-3 w-full border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-amber-500 focus:outline-hidden bg-slate-50/50"
+            className="pl-10 pr-4 py-3 w-full border border-border rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
           />
         </div>
         <div className="flex items-center space-x-3 shrink-0">
-          <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider font-mono">Statut:</span>
+          <span className="text-[10px] text-muted font-black uppercase tracking-wider font-mono">Statut:</span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="py-3 pl-3 pr-8 border border-slate-200 rounded-xl text-xs font-bold bg-white focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
+            className="py-3 pl-3 pr-8 border border-border rounded-xl text-xs font-bold bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden"
           >
             <option value="Tous">Tous les statuts</option>
             <option value="Brouillon">Brouillon</option>
@@ -168,12 +172,12 @@ export default function DevisView({
         </div>
       </div>
 
-      {/* Devis List Table */}
-      <div className="bg-white rounded-[2rem] border-2 border-slate-100 shadow-xs overflow-hidden">
+      {/* Devis List Table - Desktop */}
+      <div className="hidden md:block bg-surface rounded-[2rem] border-2 border-border shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b-2 border-slate-100 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+              <tr className="bg-neutral-50 dark:bg-neutral-800 border-b-2 border-border text-muted font-bold uppercase tracking-wider text-[10px]">
                 <th className="py-4 px-5">N° Dévis</th>
                 <th className="py-4 px-5">Date Émission</th>
                 <th className="py-4 px-5">Client</th>
@@ -183,26 +187,26 @@ export default function DevisView({
                 <th className="py-4 px-5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {filteredQuotes.map((q) => {
                 const totalItemsCount = q.items.reduce((sum, item) => sum + item.quantity, 0);
 
                 return (
-                  <tr key={q.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="py-4 px-5 font-mono font-black text-slate-900">{q.number}</td>
-                    <td className="py-4 px-5 text-slate-500 font-bold">{q.date}</td>
-                    <td className="py-4 px-5 text-slate-800">
-                      <div className="font-bold text-slate-900">{q.customerName}</div>
-                      <div className="text-[10px] text-slate-400 font-semibold mt-0.5">Valide jusqu'au {q.expiryDate}</div>
+                  <tr key={q.id} className="hover:bg-neutral-50/50 transition-colors group">
+                    <td className="py-4 px-5 font-mono font-black text-foreground">{q.number}</td>
+                    <td className="py-4 px-5 text-muted font-bold">{q.date}</td>
+                    <td className="py-4 px-5 text-foreground">
+                      <div className="font-bold text-foreground">{q.customerName}</div>
+                      <div className="text-[10px] text-muted font-semibold mt-0.5">Valide jusqu'au {q.expiryDate}</div>
                     </td>
-                    <td className="py-4 px-5 text-right text-slate-500 font-mono font-black">{totalItemsCount}</td>
-                    <td className="py-4 px-5 text-right font-mono font-black text-slate-900">{formatFCFA(q.total)}</td>
+                    <td className="py-4 px-5 text-right text-muted font-mono font-black">{totalItemsCount}</td>
+                    <td className="py-4 px-5 text-right font-mono font-black text-foreground">{formatFCFA(q.total)}</td>
                     <td className="py-4 px-5 text-center">
                       <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                        q.status === 'Accepté' ? 'bg-emerald-100 text-emerald-800' :
-                        q.status === 'Envoyé' ? 'bg-blue-100 text-blue-800' :
-                        q.status === 'Brouillon' ? 'bg-slate-100 text-slate-700' :
-                        'bg-rose-100 text-rose-800'
+                        q.status === 'Accepté' ? 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300' :
+                        q.status === 'Envoyé' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-800 dark:text-blue-300' :
+                        q.status === 'Brouillon' ? 'bg-neutral-100 dark:bg-neutral-700 text-foreground' :
+                        'bg-rose-100 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300'
                       }`}>
                         {q.status}
                       </span>
@@ -211,45 +215,49 @@ export default function DevisView({
                       <div className="flex items-center justify-end space-x-2">
                         {/* Status controls */}
                         {q.status === 'Envoyé' && (
-                          <button
+                          <Button
+                            variant="icon"
                             onClick={() => onUpdateQuoteStatus(q.id, 'Accepté')}
                             title="Marquer comme Accepté"
-                            className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl cursor-pointer transition-colors"
+                            className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
                           >
                             <Check className="h-4.5 w-4.5 stroke-[2.5]" />
-                          </button>
+                          </Button>
                         )}
                         
                         {/* ERPNext Action: Convert to sales invoice */}
                         {q.status === 'Accepté' && (
-                          <button
+                          <Button
+                            variant="success"
+                            size="sm"
                             onClick={() => handleOpenConvert(q)}
-                            className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-[9px] uppercase tracking-wider px-3 py-1.5 rounded-xl flex items-center space-x-1 shadow-sm transition-all hover:scale-[1.02]"
+                            className="font-black text-[9px] uppercase tracking-wider shadow-sm"
                           >
                             <ArrowRight className="h-3 w-3 stroke-[3]" />
                             <span>Facturer</span>
-                          </button>
+                          </Button>
                         )}
 
                         {/* View/Print template */}
-                        <button
+                        <Button
+                          variant="icon"
                           onClick={() => setSelectedQuoteForPrint(q)}
                           title="Imprimer / Devis Proforma"
-                          className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors"
                         >
                           <Printer className="h-4.5 w-4.5 stroke-[2]" />
-                        </button>
+                        </Button>
 
-                        <button
+                        <Button
+                          variant="icon"
                           onClick={() => {
                             if (confirm("Supprimer ce dévis ?")) {
                               onDeleteQuote(q.id);
                             }
                           }}
-                          className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer transition-colors"
+                          className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
                         >
                           <Trash2 className="h-4.5 w-4.5 stroke-[2]" />
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -257,7 +265,7 @@ export default function DevisView({
               })}
               {filteredQuotes.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-slate-400 font-mono italic">
+                  <td colSpan={7} className="py-16 text-center text-muted font-mono italic">
                     Aucun devis enregistré ou correspondant à la recherche.
                   </td>
                 </tr>
@@ -267,246 +275,305 @@ export default function DevisView({
         </div>
       </div>
 
-      {/* MODAL 1: CREATE DEVIS PROFORMA */}
-      <AnimatePresence>
-        {isCreateOpen && (
-          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.18)] border-2 border-slate-100 max-w-4xl w-full overflow-hidden flex flex-col max-h-[90vh]"
-            >
-              <div className="flex items-center justify-between bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 px-6 py-5 border-b-2 border-amber-500 shrink-0">
-                <div className="flex items-center space-x-2">
-                  <FileText className="h-5 w-5 stroke-[2.5]" />
-                  <h3 className="font-black font-display text-sm uppercase tracking-wider">Générer un Devis Proforma</h3>
-                </div>
-                <button onClick={() => setIsCreateOpen(false)} className="text-slate-950 hover:text-white cursor-pointer transition-colors">
-                  <X className="h-5 w-5 stroke-[2.5]" />
-                </button>
-              </div>
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {filteredQuotes.map((q) => {
+          const totalItemsCount = q.items.reduce((sum, item) => sum + item.quantity, 0);
 
-              <div className="p-6 overflow-y-auto space-y-6 text-xs flex-1 bg-slate-50/30">
-                {/* Customer and dates selection */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Sélectionner Client *</label>
-                    <select
-                      value={customerId}
-                      onChange={(e) => setCustomerId(e.target.value)}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl bg-white focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-bold"
-                    >
-                      <option value="">-- Choisir un client sénégalais --</option>
-                      {customers.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} {c.company ? `(${c.company})` : ''} — {c.phone}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Date Émission</label>
-                    <input
-                      type="date"
-                      value={quoteDate}
-                      onChange={(e) => setQuoteDate(e.target.value)}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Date d'Expiration</label>
-                    <input
-                      type="date"
-                      value={expiryDate}
-                      onChange={(e) => setExpiryDate(e.target.value)}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
-                    />
-                  </div>
-                </div>
-
-                {/* Line Item Creator Grid */}
-                <div className="bg-white p-5 rounded-3xl border-2 border-slate-100 shadow-sm space-y-3">
-                  <span className="font-black text-slate-800 block text-xs uppercase tracking-wider">Ajouter des articles du catalogue</span>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                    <div className="md:col-span-2">
-                      <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Désignation du produit</label>
-                      <select
-                        value={tempItemId}
-                        onChange={(e) => handleTempProductChange(e.target.value)}
-                        className="w-full border border-slate-200 p-2.5 rounded-xl bg-slate-50/50 focus:ring-2 focus:ring-amber-500 focus:outline-hidden text-xs font-bold"
-                      >
-                        <option value="">-- Choisir un article en stock --</option>
-                        {items.map(item => (
-                          <option key={item.id} value={item.id} disabled={item.stockCount <= 0}>
-                            {item.name} [{item.ref}] — En stock: {item.stockCount} {item.unit}s ({formatFCFA(item.sellingPrice)})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Quantité</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={tempQty}
-                        onChange={(e) => setTempQty(Math.max(1, Number(e.target.value)))}
-                        className="w-full border border-slate-200 p-2.5 rounded-xl font-mono font-bold text-xs focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
-                      />
-                    </div>
-                    <div>
-                      <button
-                        type="button"
-                        onClick={handleAddLine}
-                        disabled={!tempItemId}
-                        className="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 text-white font-black py-2.5 px-3 rounded-xl flex items-center justify-center space-x-1.5 cursor-pointer transition-all hover:scale-[1.01] text-xs"
-                      >
-                        <Plus className="h-4 w-4 stroke-[2.5]" />
-                        <span>Ajouter la ligne</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Added lines list */}
+          return (
+            <div key={q.id} className="bg-surface p-4 rounded-xl border border-border">
+              <div className="flex justify-between items-start">
                 <div>
-                  <span className="font-black text-slate-800 block mb-2.5 uppercase tracking-wider">Articles dans la proposition</span>
-                  {quoteLines.length === 0 ? (
-                    <div className="border-2 border-dashed border-slate-200 rounded-[2rem] p-8 text-center text-slate-400 italic font-mono bg-white">
-                      Aucun article ajouté pour le moment.
-                    </div>
-                  ) : (
-                    <div className="border-2 border-slate-100 rounded-[2rem] overflow-hidden bg-white shadow-xs">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50 font-bold text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                            <th className="py-3 px-4">Désignation</th>
-                            <th className="py-3 px-4 text-center">Unité</th>
-                            <th className="py-3 px-4 text-center">Quantité</th>
-                            <th className="py-3 px-4 text-right">Prix Unitaire (FCFA)</th>
-                            <th className="py-3 px-4 text-right">Total HT (FCFA)</th>
-                            <th className="py-3 px-4 text-right"></th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {quoteLines.map((line, idx) => (
-                            <tr key={idx} className="hover:bg-slate-50/50">
-                              <td className="py-3 px-4 font-bold text-slate-900">{line.itemName}</td>
-                              <td className="py-3 px-4 text-center text-slate-500 font-semibold">{line.unit}</td>
-                              <td className="py-3 px-4 text-center font-mono font-black text-slate-900 bg-slate-50/30">{line.quantity}</td>
-                              <td className="py-3 px-4 text-right font-mono text-slate-600 font-bold">{formatFCFA(line.price)}</td>
-                              <td className="py-3 px-4 text-right font-mono font-black text-slate-900">{formatFCFA(line.total)}</td>
-                              <td className="py-3 px-4 text-right">
-                                <button
-                                  type="button"
-                                  onClick={() => removeLine(idx)}
-                                  className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 cursor-pointer"
-                                >
-                                  <Trash2 className="h-4.5 w-4.5" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                  <p className="font-bold text-foreground font-mono">{q.number}</p>
+                  <p className="text-xs text-muted">{q.date}</p>
+                </div>
+                <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                  q.status === 'Accepté' ? 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300' :
+                  q.status === 'Envoyé' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-800 dark:text-blue-300' :
+                  q.status === 'Brouillon' ? 'bg-neutral-100 dark:bg-neutral-700 text-foreground' :
+                  'bg-rose-100 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300'
+                }`}>
+                  {q.status}
+                </span>
+              </div>
+              <div className="mt-2">
+                <p className="font-bold text-foreground text-sm">{q.customerName}</p>
+                <p className="text-xs text-muted">Valide jusqu'au {q.expiryDate}</p>
+              </div>
+              <div className="mt-3 flex justify-between items-center pt-3 border-t border-border">
+                <div>
+                  <span className="text-[10px] text-muted font-semibold">{totalItemsCount} article(s)</span>
+                  <p className="font-mono font-bold text-foreground">{formatFCFA(q.total)}</p>
+                </div>
+                <div className="flex gap-1.5">
+                  {q.status === 'Envoyé' && (
+                    <Button
+                      variant="icon"
+                      onClick={() => onUpdateQuoteStatus(q.id, 'Accepté')}
+                      title="Marquer comme Accepté"
+                      className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                    >
+                      <Check className="h-4.5 w-4.5 stroke-[2.5]" />
+                    </Button>
                   )}
-                </div>
-
-                {/* Subtotal, discount & notes section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t-2 border-slate-100 pt-5">
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Notes internes / Conditions de livraison</label>
-                    <textarea
-                      placeholder="e.g. Camion de livraison à la charge du client. Prix bloqué pendant 15 jours..."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      className="w-full border border-slate-200 p-3 rounded-2xl h-24 focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-medium text-xs"
-                    />
-                  </div>
-                  <div className="bg-slate-50/50 p-5 rounded-[2rem] border-2 border-slate-100 flex flex-col justify-between">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-slate-500 font-semibold">
-                        <span>Sous-total HT :</span>
-                        <span className="font-mono font-bold">{formatFCFA(totals.subtotal)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-slate-500 font-semibold">
-                        <div className="flex items-center space-x-1 shrink-0">
-                          <span>Remise globale (FCFA) :</span>
-                        </div>
-                        <input
-                          type="number"
-                          value={discount}
-                          onChange={(e) => setDiscount(Math.max(0, Number(e.target.value)))}
-                          className="w-28 border border-slate-200 p-1.5 rounded-xl font-mono font-black text-right focus:ring-2 focus:ring-amber-500 focus:outline-hidden bg-white"
-                        />
-                      </div>
-                      <div className="flex items-center justify-between text-slate-500 font-semibold">
-                        <span>TVA (18%) :</span>
-                        <span className="font-mono font-bold">{formatFCFA(totals.tax)}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between border-t-2 border-slate-200/50 pt-3 mt-3">
-                      <span className="text-xs font-black text-slate-900 uppercase tracking-wider">NET À PAYER :</span>
-                      <span className="text-lg font-black text-rose-600 font-mono">{formatFCFA(totals.total)}</span>
-                    </div>
-                  </div>
+                  {q.status === 'Accepté' && (
+                    <Button
+                      variant="success"
+                      size="sm"
+                      onClick={() => handleOpenConvert(q)}
+                      className="font-black text-[9px] uppercase tracking-wider shadow-sm"
+                    >
+                      <ArrowRight className="h-3 w-3 stroke-[3]" />
+                      <span>Facturer</span>
+                    </Button>
+                  )}
+                  <Button
+                    variant="icon"
+                    onClick={() => setSelectedQuoteForPrint(q)}
+                    title="Imprimer / Devis Proforma"
+                  >
+                    <Printer className="h-4.5 w-4.5 stroke-[2]" />
+                  </Button>
+                  <Button
+                    variant="icon"
+                    onClick={() => {
+                      if (confirm("Supprimer ce dévis ?")) {
+                        onDeleteQuote(q.id);
+                      }
+                    }}
+                    className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                  >
+                    <Trash2 className="h-4.5 w-4.5 stroke-[2]" />
+                  </Button>
                 </div>
               </div>
-
-              {/* Action footer */}
-              <div className="p-4 bg-slate-50 border-t-2 border-slate-100 shrink-0 flex items-center justify-between">
-                <span className="text-[10px] text-slate-400 font-bold italic">Saisie enregistrée localement</span>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => setIsCreateOpen(false)}
-                    className="px-4 py-2.5 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl font-bold cursor-pointer transition-colors"
-                  >
-                    Fermer
-                  </button>
-                  <button
-                    onClick={() => handleSaveQuote('Brouillon')}
-                    className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl font-bold cursor-pointer transition-colors"
-                  >
-                    Brouillon
-                  </button>
-                  <button
-                    onClick={() => handleSaveQuote('Envoyé')}
-                    className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl font-black cursor-pointer shadow-sm transition-all hover:scale-[1.02]"
-                  >
-                    Valider & Envoyer
-                  </button>
-                </div>
-              </div>
-            </motion.div>
+            </div>
+          );
+        })}
+        {filteredQuotes.length === 0 && (
+          <div className="py-16 text-center text-muted font-mono italic bg-surface rounded-xl border border-dashed border-border">
+            Aucun devis enregistré ou correspondant à la recherche.
           </div>
         )}
-      </AnimatePresence>
+      </div>
 
-      {/* MODAL 2: PRINT PREVIEW POPUP */}
+      {/* MODAL 1: CREATE DEVIS PROFORMA */}
+      <Modal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="Nouveau Devis"
+        icon={FileText}
+        size="4xl"
+        footer={
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted font-bold italic">Saisie enregistrée localement</span>
+            <div className="flex space-x-2">
+              <Button variant="secondary" onClick={() => setIsCreateOpen(false)}>
+                Fermer
+              </Button>
+              <Button variant="secondary" onClick={() => handleSaveQuote('Brouillon')}>
+                Brouillon
+              </Button>
+              <Button variant="primary" onClick={() => handleSaveQuote('Envoyé')}>
+                Valider & Envoyer
+              </Button>
+            </div>
+          </div>
+        }
+      >
+        <div className="space-y-6 text-xs bg-neutral-50/30 dark:bg-neutral-800/30 -m-6 p-6">
+          {/* Customer and dates selection */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-muted font-bold mb-1">Sélectionner Client *</label>
+              <select
+                value={customerId}
+                onChange={(e) => setCustomerId(e.target.value)}
+                className="w-full border border-border p-2.5 rounded-xl bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden font-bold"
+              >
+                <option value="">-- Choisir un client sénégalais --</option>
+                {customers.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.company ? `(${c.company})` : ''} — {c.phone}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-muted font-bold mb-1">Date Émission</label>
+              <input
+                type="date"
+                value={quoteDate}
+                onChange={(e) => setQuoteDate(e.target.value)}
+                className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
+              />
+            </div>
+            <div>
+              <label className="block text-muted font-bold mb-1">Date d'Expiration</label>
+              <input
+                type="date"
+                value={expiryDate}
+                onChange={(e) => setExpiryDate(e.target.value)}
+                className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
+              />
+            </div>
+          </div>
+
+          {/* Line Item Creator Grid */}
+          <div className="bg-surface p-5 rounded-3xl border-2 border-border shadow-sm space-y-3">
+            <span className="font-black text-foreground block text-xs uppercase tracking-wider">Ajouter des articles du catalogue</span>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+              <div className="md:col-span-2">
+                <label className="block text-[10px] text-muted font-bold uppercase tracking-wider mb-1">Désignation du produit</label>
+                <select
+                  value={tempItemId}
+                  onChange={(e) => handleTempProductChange(e.target.value)}
+                  className="w-full border border-border p-2.5 rounded-xl bg-neutral-50/50 focus:ring-2 focus:ring-primary focus:outline-hidden text-xs font-bold"
+                >
+                  <option value="">-- Choisir un article en stock --</option>
+                  {items.map(item => (
+                    <option key={item.id} value={item.id} disabled={item.stockCount <= 0}>
+                      {item.name} [{item.ref}] — En stock: {item.stockCount} {item.unit}s ({formatFCFA(item.sellingPrice)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] text-muted font-bold uppercase tracking-wider mb-1">Quantité</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={tempQty}
+                  onChange={(e) => setTempQty(Math.max(1, Number(e.target.value)))}
+                  className="w-full border border-border p-2.5 rounded-xl font-mono font-bold text-xs focus:ring-2 focus:ring-primary focus:outline-hidden"
+                />
+              </div>
+              <div>
+                <Button
+                  variant="dark"
+                  onClick={handleAddLine}
+                  disabled={!tempItemId}
+                  className="w-full disabled:bg-neutral-100 dark:disabled:bg-neutral-700 disabled:text-muted flex items-center justify-center space-x-1.5"
+                >
+                  <Plus className="h-4 w-4 stroke-[2.5]" />
+                  <span>Ajouter la ligne</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Added lines list */}
+          <div>
+            <span className="font-black text-foreground block mb-2.5 uppercase tracking-wider">Articles dans la proposition</span>
+            {quoteLines.length === 0 ? (
+              <div className="border-2 border-dashed border-border rounded-[2rem] p-8 text-center text-muted italic font-mono bg-surface">
+                Aucun article ajouté pour le moment.
+              </div>
+            ) : (
+              <div className="border-2 border-border rounded-[2rem] overflow-hidden bg-surface shadow-xs">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-neutral-50 dark:bg-neutral-800 font-bold text-[10px] uppercase tracking-wider text-muted border-b border-border">
+                      <th className="py-3 px-4">Désignation</th>
+                      <th className="py-3 px-4 text-center">Unité</th>
+                      <th className="py-3 px-4 text-center">Quantité</th>
+                      <th className="py-3 px-4 text-right">Prix Unitaire (FCFA)</th>
+                      <th className="py-3 px-4 text-right">Total HT (FCFA)</th>
+                      <th className="py-3 px-4 text-right"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {quoteLines.map((line, idx) => (
+                      <tr key={idx} className="hover:bg-neutral-50/50">
+                        <td className="py-3 px-4 font-bold text-foreground">{line.itemName}</td>
+                        <td className="py-3 px-4 text-center text-muted font-semibold">{line.unit}</td>
+                        <td className="py-3 px-4 text-center font-mono font-black text-foreground bg-neutral-50/30">{line.quantity}</td>
+                        <td className="py-3 px-4 text-right font-mono text-muted font-bold">{formatFCFA(line.price)}</td>
+                        <td className="py-3 px-4 text-right font-mono font-black text-foreground">{formatFCFA(line.total)}</td>
+                        <td className="py-3 px-4 text-right">
+                          <Button
+                            variant="icon"
+                            type="button"
+                            onClick={() => removeLine(idx)}
+                            className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                          >
+                            <Trash2 className="h-4.5 w-4.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Subtotal, discount & notes section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t-2 border-border pt-5">
+            <div>
+              <label className="block text-muted font-bold mb-1">Notes internes / Conditions de livraison</label>
+              <textarea
+                placeholder="e.g. Camion de livraison à la charge du client. Prix bloqué pendant 15 jours..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full border border-border p-3 rounded-2xl h-24 focus:ring-2 focus:ring-primary focus:outline-hidden font-medium text-xs"
+              />
+            </div>
+            <div className="bg-neutral-50/50 dark:bg-neutral-800/50 p-5 rounded-[2rem] border-2 border-border flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-muted font-semibold">
+                  <span>Sous-total HT :</span>
+                  <span className="font-mono font-bold">{formatFCFA(totals.subtotal)}</span>
+                </div>
+                <div className="flex items-center justify-between text-muted font-semibold">
+                  <div className="flex items-center space-x-1 shrink-0">
+                    <span>Remise globale (FCFA) :</span>
+                  </div>
+                  <input
+                    type="number"
+                    value={discount}
+                    onChange={(e) => setDiscount(Math.max(0, Number(e.target.value)))}
+                    className="w-28 border border-border p-1.5 rounded-xl font-mono font-black text-right focus:ring-2 focus:ring-primary focus:outline-hidden bg-surface"
+                  />
+                </div>
+                <div className="flex items-center justify-between text-muted font-semibold">
+                  <span>TVA (18%) :</span>
+                  <span className="font-mono font-bold">{formatFCFA(totals.tax)}</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between border-t-2 border-border/50 pt-3 mt-3">
+                <span className="text-xs font-black text-foreground uppercase tracking-wider">NET À PAYER :</span>
+                <span className="text-lg font-black text-rose-600 dark:text-rose-400 font-mono">{formatFCFA(totals.total)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* MODAL 2: PRINT PREVIEW POPUP (kept inline for print styling) */}
       <AnimatePresence>
         {selectedQuoteForPrint && (
-          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-neutral-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.18)] border-2 border-slate-100 max-w-3xl w-full overflow-hidden flex flex-col max-h-[90vh]"
+              className="bg-surface rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.18)] border-2 border-border max-w-3xl w-full overflow-hidden flex flex-col max-h-[90vh]"
             >
               {/* Controls header */}
-              <div className="bg-slate-900 text-white px-6 py-4 shrink-0 flex items-center justify-between border-b-2 border-slate-800">
-                <span className="font-black text-xs font-mono uppercase tracking-wider text-slate-400">Modèle de Devis Proforma</span>
+              <div className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 px-6 py-4 shrink-0 flex items-center justify-between border-b-2 border-neutral-800 dark:border-neutral-300">
+                <span className="font-black text-xs font-mono uppercase tracking-wider text-muted">Modèle de Devis Proforma</span>
                 <div className="flex space-x-3 items-center">
                   <button
                     onClick={printQuote}
-                    className="bg-amber-500 hover:bg-amber-600 text-slate-950 px-4 py-2 rounded-xl font-black text-xs flex items-center space-x-1.5 cursor-pointer transition-all hover:scale-[1.02]"
+                    className="bg-amber-500 hover:bg-amber-600 text-slate-950 dark:text-neutral-900 px-4 py-2 rounded-xl font-black text-xs flex items-center space-x-1.5 cursor-pointer transition-all hover:scale-[1.02]"
                   >
                     <Printer className="h-4 w-4 stroke-[2.5]" />
                     <span>Imprimer</span>
                   </button>
                   <button
                     onClick={() => setSelectedQuoteForPrint(null)}
-                    className="text-slate-400 hover:text-white cursor-pointer transition-colors p-1"
+                    className="text-muted dark:text-neutral-600 hover:text-white dark:hover:text-neutral-900 cursor-pointer transition-colors p-1"
                   >
                     <X className="h-5 w-5 stroke-[2.5]" />
                   </button>
@@ -514,37 +581,37 @@ export default function DevisView({
               </div>
 
               {/* Printable Body */}
-              <div id="print-area" className="p-8 overflow-y-auto bg-white text-[11px] leading-relaxed text-slate-800 flex-1 font-sans">
+              <div id="print-area" className="p-8 overflow-y-auto bg-surface text-[11px] leading-relaxed text-foreground flex-1 font-sans">
                 {/* Store Header Info */}
-                <div className="flex justify-between items-start border-b-2 border-slate-100 pb-6 mb-6">
+                <div className="flex justify-between items-start border-b-2 border-border pb-6 mb-6">
                   <div>
                     <h2 className="text-base font-black font-display text-indigo-900 tracking-wider uppercase">QUINCAILLERIE EL HADJI BASSIROU & FILS</h2>
-                    <p className="text-[10px] text-slate-500 mt-1.5 max-w-sm font-semibold">
+                    <p className="text-[10px] text-muted mt-1.5 max-w-sm font-semibold">
                       Avenue Cheikh Anta Diop, Dakar, Sénégal • Tél: +221 33 824 50 50<br/>
                       NINEA: 006548921-2G3 • RC: SN-DKR-2024-B-8542
                     </p>
                   </div>
                   <div className="text-right">
-                    <div className="bg-red-50 text-red-800 px-3 py-1 rounded-xl font-black text-[10px] uppercase tracking-wider inline-block border-2 border-red-100 mb-2">
+                    <div className="bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 px-3 py-1 rounded-xl font-black text-[10px] uppercase tracking-wider inline-block border-2 border-red-100 dark:border-red-800 mb-2">
                       DEVIS PROFORMA
                     </div>
-                    <p className="font-mono font-black text-slate-900 text-xs">{selectedQuoteForPrint.number}</p>
-                    <p className="text-slate-400 font-mono text-[9px] font-bold">Émis le {selectedQuoteForPrint.date}</p>
+                    <p className="font-mono font-black text-foreground text-xs">{selectedQuoteForPrint.number}</p>
+                    <p className="text-muted font-mono text-[9px] font-bold">Émis le {selectedQuoteForPrint.date}</p>
                   </div>
                 </div>
 
                 {/* Relational details */}
-                <div className="grid grid-cols-2 gap-8 mb-6 bg-slate-50 p-4 rounded-2xl border-2 border-slate-100/50">
+                <div className="grid grid-cols-2 gap-8 mb-6 bg-neutral-50 dark:bg-neutral-800 p-4 rounded-2xl border-2 border-border/50">
                   <div>
-                    <span className="text-[9px] text-slate-400 block font-black uppercase tracking-wider font-mono">DESTINATAIRE</span>
-                    <span className="font-black text-slate-900 text-xs block mt-1">{selectedQuoteForPrint.customerName}</span>
+                    <span className="text-[9px] text-muted block font-black uppercase tracking-wider font-mono">DESTINATAIRE</span>
+                    <span className="font-black text-foreground text-xs block mt-1">{selectedQuoteForPrint.customerName}</span>
                     {/* Retrieve customer data if available */}
                     {(() => {
                       const cust = customers.find(c => c.id === selectedQuoteForPrint.customerId);
                       if (cust) {
                         return (
-                          <div className="text-slate-500 mt-1.5 space-y-0.5 font-semibold">
-                            {cust.company && <p className="font-black text-slate-700">{cust.company}</p>}
+                          <div className="text-muted mt-1.5 space-y-0.5 font-semibold">
+                            {cust.company && <p className="font-black text-foreground">{cust.company}</p>}
                             {cust.phone && <p>Tél: {cust.phone}</p>}
                             {cust.address && <p>{cust.address}</p>}
                           </div>
@@ -554,11 +621,11 @@ export default function DevisView({
                     })()}
                   </div>
                   <div className="text-right font-semibold">
-                    <span className="text-[9px] text-slate-400 block font-black uppercase tracking-wider font-mono">DÉTAILS</span>
-                    <div className="text-slate-700 mt-1.5 space-y-1">
-                      <p><span className="font-bold text-slate-400">Durée de Validité:</span> 30 Jours</p>
-                      <p><span className="font-bold text-slate-400">Date d'Expiration:</span> {selectedQuoteForPrint.expiryDate}</p>
-                      <p><span className="font-bold text-slate-400">Devise:</span> Franc CFA (XOF)</p>
+                    <span className="text-[9px] text-muted block font-black uppercase tracking-wider font-mono">DÉTAILS</span>
+                    <div className="text-foreground mt-1.5 space-y-1">
+                      <p><span className="font-bold text-muted">Durée de Validité:</span> 30 Jours</p>
+                      <p><span className="font-bold text-muted">Date d'Expiration:</span> {selectedQuoteForPrint.expiryDate}</p>
+                      <p><span className="font-bold text-muted">Devise:</span> Franc CFA (XOF)</p>
                     </div>
                   </div>
                 </div>
@@ -567,7 +634,7 @@ export default function DevisView({
                 <div className="mb-6">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 font-bold text-slate-400 border-b-2 border-slate-100 uppercase text-[9px] tracking-wider">
+                      <tr className="bg-neutral-50 dark:bg-neutral-800 font-bold text-muted border-b-2 border-border uppercase text-[9px] tracking-wider">
                         <th className="py-2.5 px-3">Réf / Article</th>
                         <th className="py-2.5 px-3 text-center">Unité</th>
                         <th className="py-2.5 px-3 text-center">Qté</th>
@@ -575,14 +642,14 @@ export default function DevisView({
                         <th className="py-2.5 px-3 text-right">Total (FCFA)</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-border">
                       {selectedQuoteForPrint.items.map((line, idx) => (
                         <tr key={idx}>
-                          <td className="py-2.5 px-3 font-bold text-slate-900">{line.itemName}</td>
-                          <td className="py-2.5 px-3 text-center text-slate-500 font-semibold">{line.unit}</td>
-                          <td className="py-2.5 px-3 text-center font-mono font-black text-slate-900">{line.quantity}</td>
-                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-600">{formatFCFA(line.price)}</td>
-                          <td className="py-2.5 px-3 text-right font-mono font-black text-slate-900">{formatFCFA(line.total)}</td>
+                          <td className="py-2.5 px-3 font-bold text-foreground">{line.itemName}</td>
+                          <td className="py-2.5 px-3 text-center text-muted font-semibold">{line.unit}</td>
+                          <td className="py-2.5 px-3 text-center font-mono font-black text-foreground">{line.quantity}</td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-muted">{formatFCFA(line.price)}</td>
+                          <td className="py-2.5 px-3 text-right font-mono font-black text-foreground">{formatFCFA(line.total)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -590,49 +657,49 @@ export default function DevisView({
                 </div>
 
                 {/* Financial math block */}
-                <div className="flex justify-between items-start border-t-2 border-slate-100 pt-5">
-                  <div className="max-w-xs text-[10px] text-slate-400 font-semibold leading-relaxed">
+                <div className="flex justify-between items-start border-t-2 border-border pt-5">
+                  <div className="max-w-xs text-[10px] text-muted font-semibold leading-relaxed">
                     {selectedQuoteForPrint.notes && (
-                      <div className="text-slate-600 font-medium not-italic mt-2 p-3 bg-slate-50 rounded-2xl border-2 border-slate-100">
-                        <span className="font-black text-slate-800 block mb-1 uppercase tracking-wider text-[9px]">Notes:</span>
+                      <div className="text-muted font-medium not-italic mt-2 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-2xl border-2 border-border">
+                        <span className="font-black text-foreground block mb-1 uppercase tracking-wider text-[9px]">Notes:</span>
                         {selectedQuoteForPrint.notes}
                       </div>
                     )}
                     <p className="mt-4">Ce document est un devis proforma, il ne constitue pas une facture définitive. Les marchandises restent la propriété du vendeur jusqu'au paiement intégral.</p>
                   </div>
                   <div className="w-64 space-y-2 text-right">
-                    <div className="flex justify-between text-slate-500 font-semibold">
+                    <div className="flex justify-between text-muted font-semibold">
                       <span>Sous-total HT:</span>
                       <span className="font-mono font-bold">{formatFCFA(selectedQuoteForPrint.subtotal)}</span>
                     </div>
                     {selectedQuoteForPrint.discount > 0 && (
-                      <div className="flex justify-between text-slate-500 font-semibold">
+                      <div className="flex justify-between text-muted font-semibold">
                         <span>Remise:</span>
-                        <span className="font-mono font-bold text-emerald-600">-{formatFCFA(selectedQuoteForPrint.discount)}</span>
+                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">-{formatFCFA(selectedQuoteForPrint.discount)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-slate-500 font-semibold">
+                    <div className="flex justify-between text-muted font-semibold">
                       <span>TVA (18%):</span>
                       <span className="font-mono font-bold">{formatFCFA(selectedQuoteForPrint.tax)}</span>
                     </div>
-                    <div className="flex justify-between text-slate-900 font-black border-t-2 border-slate-100 pt-2 text-xs">
+                    <div className="flex justify-between text-foreground font-black border-t-2 border-border pt-2 text-xs">
                       <span>NET À PAYER:</span>
-                      <span className="font-mono text-rose-600 text-sm">{formatFCFA(selectedQuoteForPrint.total)}</span>
+                      <span className="font-mono text-rose-600 dark:text-rose-400 text-sm">{formatFCFA(selectedQuoteForPrint.total)}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Signature boxes */}
-                <div className="grid grid-cols-2 gap-4 mt-12 pt-8 border-t-2 border-dashed border-slate-200 text-center text-[10px]">
+                <div className="grid grid-cols-2 gap-4 mt-12 pt-8 border-t-2 border-dashed border-border text-center text-[10px]">
                   <div>
-                    <p className="text-slate-400 font-black font-mono uppercase tracking-wider text-[9px]">LE CLIENT (Pour accord)</p>
-                    <div className="h-16 mt-2 border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/30"></div>
-                    <p className="text-slate-400 mt-1.5 italic font-semibold">Signature précédée de la mention "Lu et approuvé"</p>
+                    <p className="text-muted font-black font-mono uppercase tracking-wider text-[9px]">LE CLIENT (Pour accord)</p>
+                    <div className="h-16 mt-2 border-2 border-dashed border-border rounded-2xl bg-neutral-50/30 dark:bg-neutral-800/30"></div>
+                    <p className="text-muted mt-1.5 italic font-semibold">Signature précédée de la mention "Lu et approuvé"</p>
                   </div>
                   <div>
-                    <p className="text-slate-400 font-black font-mono uppercase tracking-wider text-[9px]">LA DIRECTION (Quincaillerie)</p>
-                    <div className="h-16 mt-2 border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/30"></div>
-                    <p className="text-slate-400 mt-1.5 italic font-semibold">Cachet et signature du gérant</p>
+                    <p className="text-muted font-black font-mono uppercase tracking-wider text-[9px]">LA DIRECTION (Quincaillerie)</p>
+                    <div className="h-16 mt-2 border-2 border-dashed border-border rounded-2xl bg-neutral-50/30 dark:bg-neutral-800/30"></div>
+                    <p className="text-muted mt-1.5 italic font-semibold">Cachet et signature du gérant</p>
                   </div>
                 </div>
               </div>
@@ -642,104 +709,90 @@ export default function DevisView({
       </AnimatePresence>
 
       {/* MODAL 3: CONVERT DEVIS TO INVOICE POPUP */}
-      <AnimatePresence>
-        {isConvertOpen && quoteToConvert && (
-          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.18)] border-2 border-slate-100 max-w-md w-full overflow-hidden text-xs"
-            >
-              <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-6 py-4 flex items-center justify-between border-b-2 border-emerald-600">
-                <div className="flex items-center space-x-2">
-                  <FileText className="h-4.5 w-4.5 stroke-[2.5]" />
-                  <h3 className="font-black font-display uppercase tracking-wider text-xs">Convertir en Facture</h3>
+      <Modal
+        isOpen={isConvertOpen}
+        onClose={() => { setIsConvertOpen(false); setQuoteToConvert(null); }}
+        title="Convertir en Facture"
+        icon={DollarSign}
+        size="md"
+      >
+        <form onSubmit={handleConvertSubmit} className="space-y-4 text-xs -m-6 p-6 bg-neutral-50/30 dark:bg-neutral-800/30">
+          {quoteToConvert && (
+            <>
+              <div className="bg-surface p-4 rounded-2xl border-2 border-border space-y-1.5">
+                <div className="flex justify-between font-mono font-bold text-muted text-[10px]">
+                  <span>SOURCE: {quoteToConvert.number}</span>
+                  <span>DATE: {quoteToConvert.date}</span>
                 </div>
-                <button onClick={() => { setIsConvertOpen(false); setQuoteToConvert(null); }} className="text-white hover:text-slate-100 cursor-pointer transition-colors p-1">
-                  <X className="h-5 w-5 stroke-[2.5]" />
-                </button>
+                <p className="font-black text-foreground">Client: {quoteToConvert.customerName}</p>
+                <div className="flex justify-between border-t-2 border-border pt-2.5 mt-2">
+                  <span className="font-bold text-muted uppercase tracking-wider text-[9px]">Net à Facturer:</span>
+                  <span className="font-black text-emerald-600 text-sm font-mono">{formatFCFA(quoteToConvert.total)}</span>
+                </div>
               </div>
 
-              <form onSubmit={handleConvertSubmit} className="p-6 space-y-4 bg-slate-50/30">
-                <div className="bg-white p-4 rounded-2xl border-2 border-slate-100 space-y-1.5">
-                  <div className="flex justify-between font-mono font-bold text-slate-400 text-[10px]">
-                    <span>SOURCE: {quoteToConvert.number}</span>
-                    <span>DATE: {quoteToConvert.date}</span>
-                  </div>
-                  <p className="font-black text-slate-900">Client: {quoteToConvert.customerName}</p>
-                  <div className="flex justify-between border-t-2 border-slate-100 pt-2.5 mt-2">
-                    <span className="font-bold text-slate-500 uppercase tracking-wider text-[9px]">Net à Facturer:</span>
-                    <span className="font-black text-emerald-600 text-sm font-mono">{formatFCFA(quoteToConvert.total)}</span>
-                  </div>
-                </div>
+              <div>
+                <label className="block text-muted font-bold mb-1">Mode de Paiement de la facture *</label>
+                <select
+                  value={convertPaymentMethod}
+                  onChange={(e) => setConvertPaymentMethod(e.target.value as any)}
+                  className="w-full border border-border p-2.5 rounded-xl bg-surface font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
+                >
+                  <option value="Espèces">Espèces (Comptoir)</option>
+                  <option value="Wave">Wave (Sénégal • 1%)</option>
+                  <option value="Orange Money">Orange Money</option>
+                  <option value="Chèque">Chèque bancaire</option>
+                  <option value="Virement">Virement bancaire (CBAO/SGBS)</option>
+                </select>
+              </div>
 
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-600 font-bold mb-1">Mode de Paiement de la facture *</label>
-                  <select
-                    value={convertPaymentMethod}
-                    onChange={(e) => setConvertPaymentMethod(e.target.value as any)}
-                    className="w-full border border-slate-200 p-2.5 rounded-xl bg-white font-bold focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
-                  >
-                    <option value="Espèces">Espèces (Comptoir)</option>
-                    <option value="Wave">Wave (Sénégal • 1%)</option>
-                    <option value="Orange Money">Orange Money</option>
-                    <option value="Chèque">Chèque bancaire</option>
-                    <option value="Virement">Virement bancaire (CBAO/SGBS)</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Montant Encaissé *</label>
-                    <input
-                      type="number"
-                      max={quoteToConvert.total}
-                      value={convertAmountPaid}
-                      onChange={(e) => setConvertAmountPaid(Math.max(0, Math.min(quoteToConvert.total, Number(e.target.value))))}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-mono font-black focus:ring-2 focus:ring-amber-500 focus:outline-hidden text-xs bg-slate-50/50"
-                      required
-                    />
-                    <div className="text-[9px] mt-1.5 leading-normal">
-                      {convertAmountPaid < quoteToConvert.total ? (
-                        <span className="text-rose-600 font-bold">Reste: {formatFCFA(quoteToConvert.total - convertAmountPaid)} (Enregistré en crédit)</span>
-                      ) : (
-                        <span className="text-emerald-600 font-black">Soldé en intégralité</span>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Opérateur de vente *</label>
-                    <input
-                      type="text"
-                      value={convertOperator}
-                      onChange={(e) => setConvertOperator(e.target.value)}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-bold focus:ring-2 focus:ring-amber-500 focus:outline-hidden bg-white text-slate-800"
-                      required
-                    />
+                  <label className="block text-muted font-bold mb-1">Montant Encaissé *</label>
+                  <input
+                    type="number"
+                    max={quoteToConvert.total}
+                    value={convertAmountPaid}
+                    onChange={(e) => setConvertAmountPaid(Math.max(0, Math.min(quoteToConvert.total, Number(e.target.value))))}
+                    className="w-full border border-border p-2.5 rounded-xl font-mono font-black focus:ring-2 focus:ring-primary focus:outline-hidden text-xs bg-neutral-50/50"
+                    required
+                  />
+                  <div className="text-[9px] mt-1.5 leading-normal">
+                    {convertAmountPaid < quoteToConvert.total ? (
+                      <span className="text-rose-600 dark:text-rose-400 font-bold">Reste: {formatFCFA(quoteToConvert.total - convertAmountPaid)} (Enregistré en crédit)</span>
+                    ) : (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-black">Soldé en intégralité</span>
+                    )}
                   </div>
                 </div>
-
-                <div className="border-t-2 border-slate-100 pt-4 flex justify-end space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => { setIsConvertOpen(false); setQuoteToConvert(null); }}
-                    className="px-4 py-2.5 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl font-bold cursor-pointer transition-colors"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 rounded-xl font-black cursor-pointer transition-all hover:scale-[1.02]"
-                  >
-                    Générer la facture
-                  </button>
+                <div>
+                  <label className="block text-muted font-bold mb-1">Opérateur de vente *</label>
+                  <input
+                    type="text"
+                    value={convertOperator}
+                    onChange={(e) => setConvertOperator(e.target.value)}
+                    className="w-full border border-border p-2.5 rounded-xl font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-surface text-foreground"
+                    required
+                  />
                 </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+              </div>
+
+              <div className="border-t-2 border-border pt-4 flex justify-end space-x-2">
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => { setIsConvertOpen(false); setQuoteToConvert(null); }}
+                >
+                  Annuler
+                </Button>
+                <Button variant="success" type="submit">
+                  Générer la facture
+                </Button>
+              </div>
+            </>
+          )}
+        </form>
+      </Modal>
     </div>
   );
 }

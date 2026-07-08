@@ -1,10 +1,88 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
+  /* ── Fonts (preserved) ── */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Outfit", "Inter", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* ── Primary (amber) ── */
+  --color-primary: #f59e0b;
+  --color-primary-hover: #d97706;
+  --color-primary-light: #fffbeb;
+
+  /* ── Success (emerald) ── */
+  --color-success: #10b981;
+  --color-success-hover: #059669;
+  --color-success-light: #ecfdf5;
+
+  /* ── Warning (orange — separate from primary) ── */
+  --color-warning: #fb923c;
+  --color-warning-hover: #f97316;
+  --color-warning-light: #fff7ed;
+
+  /* ── Danger (rose) ── */
+  --color-danger: #f43f5e;
+  --color-danger-hover: #e11d48;
+  --color-danger-light: #fff1f2;
+
+  /* ── Neutral (slate) ── */
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+  --color-neutral-950: #020617;
+
+  /* ── Surface / Background / Foreground ── */
+  --color-surface: #ffffff;
+  --color-background: #faf9f6;
+  --color-foreground: #0f172a;
+  --color-muted: #94a3b8;
+  --color-border: #e2e8f0;
+
+  /* ── Radius ── */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-card: 2rem;
+
+  /* ── Shadows ── */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-card: 0 8px 30px rgb(0 0 0 / 0.015);
+}
+
+/* ── Dark mode overrides (warm stone palette) ── */
+.dark {
+  --color-surface: #1c1917;
+  --color-background: #0c0a09;
+  --color-foreground: #fafaf9;
+  --color-muted: #a8a29e;
+  --color-border: #292524;
+
+  --color-neutral-50: #1c1917;
+  --color-neutral-100: #292524;
+  --color-neutral-200: #44403c;
+  --color-neutral-300: #57534e;
+  --color-neutral-400: #a8a29e;
+  --color-neutral-500: #d6d3d1;
+  --color-neutral-600: #e7e5e4;
+  --color-neutral-700: #f5f5f4;
+  --color-neutral-800: #fafaf9;
+  --color-neutral-900: #fafaf9;
+  --color-neutral-950: #fafaf9;
 }
 
 /* Custom smooth transitions and bubbly scrollbar styles */
@@ -19,6 +97,12 @@
   background: #cbd5e1;
   border-radius: 9999px;
 }
+.dark ::-webkit-scrollbar-thumb {
+  background: #57534e;
+}
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #78716c;
 }

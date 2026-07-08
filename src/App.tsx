@@ -1,59 +1,40 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  LayoutDashboard, 
-  Package, 
-  FileText, 
-  ShoppingBag, 
-  Users, 
-  Settings, 
-  Menu, 
-  X, 
-  LogOut,
-  MapPin,
-  Clock,
-  Coins
-} from 'lucide-react';
+import { BrowserRouter, useNavigate } from 'react-router-dom';
 
 import { Item, StockMovement, Customer, Supplier, Quote, Invoice, StoreSettings } from './types';
-import { 
-  DEFAULT_SETTINGS, 
-  formatFCFA 
-} from './utils/data';
 
-// Modular Views
-import DashboardView from './components/DashboardView';
-import ItemsView from './components/ItemsView';
-import DevisView from './components/DevisView';
-import InvoicesView from './components/InvoicesView';
-import ContactsView from './components/ContactsView';
-import SettingsView from './components/SettingsView';
-
-// Store
 import { StoreProvider, useStore } from './context/StoreContext';
 import { useIdGenerator } from './hooks/useIdGenerator';
+import Layout from './components/Layout';
+import AppRoutes from './routes';
 
 export default function App() {
   return (
     <StoreProvider>
-      <AppContent />
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
     </StoreProvider>
   );
 }
 
 function AppContent() {
-  // Navigation (UI state - keep as local useState)
-  const [currentView, setCurrentView] = useState<string>('dashboard');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Store state and dispatch
   const [state, dispatch] = useStore();
   const { settings, items, movements, customers, suppliers, quotes, invoices } = state;
-
-  // ID generation
   const generateId = useIdGenerator();
 
-  // CALLBACKS: CATALOGUE & STOCK
+  const navigate = useNavigate();
+  const onNavigate = (view: string) => {
+    const pathMap: Record<string, string> = {
+      dashboard: '/dashboard',
+      items: '/items',
+      quotes: '/quotes',
+      invoices: '/invoices',
+      contacts: '/contacts',
+      settings: '/settings',
+    };
+    navigate(pathMap[view] || '/dashboard');
+  };
+
   const handleAddItem = (itemData: Omit<Item, 'id' | 'stockCount'>, initialQty: number, operator: string) => {
     const newId = generateId('prod');
     const newItem: Item = {
@@ -65,7 +46,6 @@ function AppContent() {
     dispatch({ type: 'SET_ITEMS', payload: [...items, newItem] });
 
     if (initialQty > 0) {
-      // Create initial stock movement
       const newMovement: StockMovement = {
         id: generateId('mov'),
         itemId: newId,
@@ -87,27 +67,24 @@ function AppContent() {
 
   const handleDeleteItem = (id: string) => {
     dispatch({ type: 'SET_ITEMS', payload: items.filter(i => i.id !== id) });
-    // clean related movements
     dispatch({ type: 'SET_MOVEMENTS', payload: movements.filter(m => m.itemId !== id) });
   };
 
   const handleAdjustStock = (
-    itemId: string, 
-    qty: number, 
-    type: 'ENTREE' | 'SORTIE', 
-    reason: StockMovement['reason'], 
-    operator: string, 
+    itemId: string,
+    qty: number,
+    type: 'ENTREE' | 'SORTIE',
+    reason: StockMovement['reason'],
+    operator: string,
     ref: string
   ) => {
     const itemObj = items.find(i => i.id === itemId);
     if (!itemObj) return;
 
     const newStockCount = type === 'ENTREE' ? itemObj.stockCount + qty : Math.max(0, itemObj.stockCount - qty);
-    
-    // Update item stock count
+
     dispatch({ type: 'SET_ITEMS', payload: items.map(i => i.id === itemId ? { ...i, stockCount: newStockCount } : i) });
 
-    // Log movement
     const newMovement: StockMovement = {
       id: generateId('mov'),
       itemId,
@@ -122,12 +99,10 @@ function AppContent() {
     dispatch({ type: 'SET_MOVEMENTS', payload: [newMovement, ...movements] });
   };
 
-  // Quick action from dashboard to restock low stock item
   const handleQuickRestock = (itemId: string, qty: number) => {
     handleAdjustStock(itemId, qty, 'ENTREE', 'Achat Fournisseur', 'Système (Auto)', 'REAPPRO-RAPIDE');
   };
 
-  // CALLBACKS: QUOTATIONS / DEVIS
   const handleAddQuote = (quoteData: Omit<Quote, 'id' | 'number'>) => {
     const nextNumber = `DEV-2026-${String(quotes.length + 1).padStart(3, '0')}`;
     const newQuote: Quote = {
@@ -146,7 +121,6 @@ function AppContent() {
     dispatch({ type: 'SET_QUOTES', payload: quotes.filter(q => q.id !== id) });
   };
 
-  // CALLBACKS: INVOICES & SALES
   const handleAddInvoice = (invoiceData: Omit<Invoice, 'id' | 'number'>, operator: string) => {
     const nextNumber = `FAC-2026-${String(invoices.length + 1).padStart(3, '0')}`;
     const newInvoice: Invoice = {
@@ -155,10 +129,8 @@ function AppContent() {
       number: nextNumber
     };
 
-    // 1. Add the invoice
     dispatch({ type: 'SET_INVOICES', payload: [newInvoice, ...invoices] });
 
-    // 2. Reduce products stock count automatically
     const updatedItems = items.map(item => {
       const line = invoiceData.items.find(l => l.itemId === item.id);
       if (line) {
@@ -171,7 +143,6 @@ function AppContent() {
     });
     dispatch({ type: 'SET_ITEMS', payload: updatedItems });
 
-    // 3. Log stock movements
     const newMovements: StockMovement[] = invoiceData.items.map((line, idx) => ({
       id: `${generateId('mov')}-${idx}`,
       itemId: line.itemId,
@@ -185,7 +156,6 @@ function AppContent() {
     }));
     dispatch({ type: 'SET_MOVEMENTS', payload: [...newMovements, ...movements] });
 
-    // 4. Update customer outstanding balance if partial payment
     const unpaidAmount = invoiceData.total - invoiceData.amountPaid;
     if (unpaidAmount > 0) {
       const updatedCustomers = customers.map(c => {
@@ -205,10 +175,8 @@ function AppContent() {
     const invoiceObj = invoices.find(inv => inv.id === id);
     if (!invoiceObj) return;
 
-    // 1. Delete invoice
     dispatch({ type: 'SET_INVOICES', payload: invoices.filter(inv => inv.id !== id) });
 
-    // 2. RESTORE stocks
     const restoredItems = items.map(item => {
       const line = invoiceObj.items.find(l => l.itemId === item.id);
       if (line) {
@@ -221,10 +189,8 @@ function AppContent() {
     });
     dispatch({ type: 'SET_ITEMS', payload: restoredItems });
 
-    // 3. Remove stock movements
     dispatch({ type: 'SET_MOVEMENTS', payload: movements.filter(m => m.referenceCode !== invoiceObj.number) });
 
-    // 4. Restore customer balance if it was credit
     const unpaid = invoiceObj.total - invoiceObj.amountPaid;
     if (unpaid > 0) {
       const restoredCustomers = customers.map(c => {
@@ -240,14 +206,12 @@ function AppContent() {
     }
   };
 
-  // Convert Quote directly to Sales Invoice
   const handleConvertQuoteToInvoice = (
-    quote: Quote, 
-    paymentMethod: 'Espèces' | 'Wave' | 'Orange Money' | 'Chèque' | 'Virement', 
-    amountPaid: number, 
+    quote: Quote,
+    paymentMethod: 'Espèces' | 'Wave' | 'Orange Money' | 'Chèque' | 'Virement',
+    amountPaid: number,
     operator: string
   ) => {
-    // Standard sales invoice generation
     handleAddInvoice({
       date: new Date().toISOString().split('T')[0],
       customerId: quote.customerId,
@@ -264,11 +228,9 @@ function AppContent() {
       quoteId: quote.id
     }, operator);
 
-    // Change quote status to Accepted
     handleUpdateQuoteStatus(quote.id, 'Accepté');
   };
 
-  // CALLBACKS: CUSTOMERS & SUPPLIERS
   const handleAddCustomer = (cData: Omit<Customer, 'id' | 'outstandingBalance'>) => {
     const newCustomer: Customer = {
       ...cData,
@@ -286,7 +248,6 @@ function AppContent() {
     dispatch({ type: 'SET_CUSTOMERS', payload: customers.filter(c => c.id !== id) });
   };
 
-  // Let customer pay outstanding credit debt
   const handlePayCustomerDebt = (customerId: string, amount: number) => {
     const updatedCustomers = customers.map(c => {
       if (c.id === customerId) {
@@ -299,7 +260,6 @@ function AppContent() {
     });
     dispatch({ type: 'SET_CUSTOMERS', payload: updatedCustomers });
 
-    // Log as a special cashier invoice with no items just to track cash receipt
     const customerObj = customers.find(c => c.id === customerId);
     if (!customerObj) return;
 
@@ -310,7 +270,7 @@ function AppContent() {
       date: new Date().toISOString().split('T')[0],
       customerId,
       customerName: customerObj.name,
-      items: [], // no physical items
+      items: [],
       subtotal: 0,
       discount: 0,
       tax: 0,
@@ -323,7 +283,6 @@ function AppContent() {
     dispatch({ type: 'SET_INVOICES', payload: [newReceiptInvoice, ...invoices] });
   };
 
-  // SUPPLIERS CALLBACKS
   const handleAddSupplier = (sData: Omit<Supplier, 'id' | 'balance'>) => {
     const newSupplier: Supplier = {
       ...sData,
@@ -341,7 +300,6 @@ function AppContent() {
     dispatch({ type: 'SET_SUPPLIERS', payload: suppliers.filter(s => s.id !== id) });
   };
 
-  // CALLBACKS: SETTINGS
   const handleUpdateSettings = (newSettings: StoreSettings) => {
     dispatch({ type: 'SET_SETTINGS', payload: newSettings });
   };
@@ -358,183 +316,38 @@ function AppContent() {
     dispatch({ type: 'RESTORE_ALL_DATA', payload: restoredData });
   };
 
-  // Render correct panel
-  const renderPanel = () => {
-    switch (currentView) {
-      case 'dashboard':
-        return (
-          <DashboardView
-            items={items}
-            invoices={invoices}
-            quotes={quotes}
-            customers={customers}
-            movements={movements}
-            onNavigate={(view) => setCurrentView(view)}
-            onQuickRestock={handleQuickRestock}
-          />
-        );
-      case 'items':
-        return (
-          <ItemsView
-            items={items}
-            movements={movements}
-            onAddItem={handleAddItem}
-            onUpdateItem={handleUpdateItem}
-            onDeleteItem={handleDeleteItem}
-            onAdjustStock={handleAdjustStock}
-          />
-        );
-      case 'quotes':
-        return (
-          <DevisView
-            quotes={quotes}
-            items={items}
-            customers={customers}
-            onAddQuote={handleAddQuote}
-            onUpdateQuoteStatus={handleUpdateQuoteStatus}
-            onDeleteQuote={handleDeleteQuote}
-            onConvertQuoteToInvoice={handleConvertQuoteToInvoice}
-          />
-        );
-      case 'invoices':
-        return (
-          <InvoicesView
-            invoices={invoices}
-            items={items}
-            customers={customers}
-            onAddInvoice={handleAddInvoice}
-            onDeleteInvoice={handleDeleteInvoice}
-          />
-        );
-      case 'contacts':
-        return (
-          <ContactsView
-            customers={customers}
-            suppliers={suppliers}
-            onAddCustomer={handleAddCustomer}
-            onUpdateCustomer={handleUpdateCustomer}
-            onDeleteCustomer={handleDeleteCustomer}
-            onPayCustomerDebt={handlePayCustomerDebt}
-            onAddSupplier={handleAddSupplier}
-            onUpdateSupplier={handleUpdateSupplier}
-            onDeleteSupplier={handleDeleteSupplier}
-          />
-        );
-      case 'settings':
-        return (
-          <SettingsView
-            settings={settings}
-            onUpdateSettings={handleUpdateSettings}
-            items={items}
-            movements={movements}
-            customers={customers}
-            suppliers={suppliers}
-            quotes={quotes}
-            invoices={invoices}
-            onRestoreAllData={handleRestoreAllData}
-          />
-        );
-      default:
-        return <div className="p-8 text-center text-gray-500 font-mono">Vue introuvable</div>;
-    }
-  };
-
-  const sidebarItems = [
-    { id: 'dashboard', name: 'Tableau de Bord', icon: LayoutDashboard },
-    { id: 'items', name: 'Catalogue & Stocks', icon: Package },
-    { id: 'quotes', name: 'Devis & Proformas', icon: FileText },
-    { id: 'invoices', name: 'Ventes & Factures', icon: ShoppingBag },
-    { id: 'contacts', name: 'Clients & Fournisseurs', icon: Users },
-    { id: 'settings', name: 'Paramètres', icon: Settings }
-  ];
-
   return (
-    <div className="min-h-screen bg-[#FAF9F6] flex flex-col md:flex-row text-slate-800 antialiased font-sans">
-      {/* 1. Mobile Top Navbar - Sticky */}
-      <div className="sticky top-0 z-40 bg-slate-900 text-white p-4 flex items-center justify-between shadow-md md:hidden shrink-0 border-b border-amber-500/20">
-        <div className="flex items-center space-x-2">
-          <div className="bg-amber-500 p-1 rounded-lg text-slate-950 font-bold text-xs">S</div>
-          <span className="font-extrabold text-sm tracking-tight font-display text-white">SUNU QUINCAILLERIE</span>
-        </div>
-        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-1 hover:bg-white/10 rounded cursor-pointer">
-          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-      </div>
-
-      {/* 2. Responsive Side Navigation Bar */}
-      <aside className={`fixed md:sticky top-[56px] md:top-0 left-0 h-[calc(100vh-56px)] md:h-screen w-64 bg-slate-900 text-white shrink-0 z-30 transform transition-transform duration-300 ${
-        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-      } flex flex-col justify-between border-r border-slate-800`}>
-        <div className="p-5 flex flex-col h-full justify-between">
-          <div>
-            {/* Store title for desktop */}
-            <div className="hidden md:flex items-center space-x-2.5 pb-6 border-b border-slate-800 mb-6">
-              <div className="bg-amber-500 p-1.5 rounded-xl text-slate-950 font-black text-sm shadow-xs shrink-0">
-                SQ
-              </div>
-              <div>
-                <h2 className="font-black text-sm tracking-wide font-display text-white">SUNU QUINCAILLERIE</h2>
-                <span className="text-[10px] text-amber-400 font-mono block">Dakar, Sénégal</span>
-              </div>
-            </div>
-
-            {/* Menu Links */}
-            <nav className="space-y-2">
-              {sidebarItems.map((item) => {
-                const IconComp = item.icon;
-                const isActive = currentView === item.id;
-
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      setCurrentView(item.id);
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-bold cursor-pointer transition-all duration-200 ${
-                      isActive 
-                        ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold transform scale-[1.02]' 
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-                    }`}
-                  >
-                    <IconComp className={`h-4.5 w-4.5 shrink-0 ${isActive ? 'text-slate-950' : 'text-amber-500'}`} />
-                    <span>{item.name}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-
-          {/* Sidebar bottom business identity block */}
-          <div className="border-t border-slate-800 pt-4 mt-6">
-            <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 space-y-2 text-[10px]">
-              <div className="flex items-center space-x-1.5 text-amber-400 font-bold font-display">
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-rose-500" />
-                <span className="truncate">{settings.storeName}</span>
-              </div>
-              <div className="flex items-center space-x-1.5 text-slate-400 font-mono">
-                <Clock className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
-                <span>GMT Dakar</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* 3. Main Content Viewport */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 max-w-7xl mx-auto w-full">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentView}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -5 }}
-            transition={{ duration: 0.15 }}
-          >
-            {renderPanel()}
-          </motion.div>
-        </AnimatePresence>
-      </main>
-    </div>
+    <Layout settings={settings}>
+      <AppRoutes
+        items={items}
+        movements={movements}
+        customers={customers}
+        suppliers={suppliers}
+        quotes={quotes}
+        invoices={invoices}
+        settings={settings}
+        onNavigate={onNavigate}
+        onAddItem={handleAddItem}
+        onUpdateItem={handleUpdateItem}
+        onDeleteItem={handleDeleteItem}
+        onAdjustStock={handleAdjustStock}
+        onQuickRestock={handleQuickRestock}
+        onAddQuote={handleAddQuote}
+        onUpdateQuoteStatus={handleUpdateQuoteStatus}
+        onDeleteQuote={handleDeleteQuote}
+        onConvertQuoteToInvoice={handleConvertQuoteToInvoice}
+        onAddInvoice={handleAddInvoice}
+        onDeleteInvoice={handleDeleteInvoice}
+        onAddCustomer={handleAddCustomer}
+        onUpdateCustomer={handleUpdateCustomer}
+        onDeleteCustomer={handleDeleteCustomer}
+        onPayCustomerDebt={handlePayCustomerDebt}
+        onAddSupplier={handleAddSupplier}
+        onUpdateSupplier={handleUpdateSupplier}
+        onDeleteSupplier={handleDeleteSupplier}
+        onUpdateSettings={handleUpdateSettings}
+        onRestoreAllData={handleRestoreAllData}
+      />
+    </Layout>
   );
 }

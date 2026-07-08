@@ -1,24 +1,22 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { 
   Package, 
   Search, 
-  Filter, 
   Plus, 
   Edit, 
   Trash2, 
-  ArrowUpDown, 
   AlertTriangle, 
   History, 
-  Settings, 
-  CheckCircle,
   PlusCircle,
   MinusCircle,
   TrendingUp,
-  X
 } from 'lucide-react';
 import { Item, Category, StockMovement } from '../types';
 import { formatFCFA } from '../utils/data';
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { Input } from '@/components/ui/Input';
+import { cn } from '@/lib/utils';
 
 interface ItemsViewProps {
   items: Item[];
@@ -178,81 +176,83 @@ export default function ItemsView({
   return (
     <div id="items-view-root" className="space-y-6">
       {/* Header section with tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
         <div>
-          <h2 className="text-xl font-bold font-sans text-gray-900">Catalogue & Gestion des Stocks</h2>
-          <p className="text-xs text-gray-500 mt-1">Gérez vos articles, surveillez les ruptures et ajustez les stocks physiques</p>
+          <h2 className="text-xl font-bold font-sans text-foreground">Catalogue & Gestion des Stocks</h2>
+          <p className="text-xs text-muted mt-1">Gérez vos articles, surveillez les ruptures et ajustez les stocks physiques</p>
         </div>
-        <div className="flex bg-gray-100 p-1 rounded-lg mt-4 sm:mt-0 self-start sm:self-center">
-          <button
+        <div className="flex gap-2 mt-4 sm:mt-0 self-start sm:self-center">
+          <Button
+            variant={activeTab === 'catalog' ? 'primary' : 'secondary'}
+            size="sm"
             onClick={() => setActiveTab('catalog')}
-            className={`flex items-center space-x-1 px-4 py-1.5 rounded-md text-xs font-medium transition-colors ${activeTab === 'catalog' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-500 hover:text-gray-800'}`}
+            className="flex items-center space-x-1"
           >
             <Package className="h-4 w-4" />
             <span>Catalogue</span>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={activeTab === 'history' ? 'primary' : 'secondary'}
+            size="sm"
             onClick={() => setActiveTab('history')}
-            className={`flex items-center space-x-1 px-4 py-1.5 rounded-md text-xs font-medium transition-colors ${activeTab === 'history' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-500 hover:text-gray-800'}`}
+            className="flex items-center space-x-1"
           >
             <History className="h-4 w-4" />
             <span>Historique des Flux</span>
-          </button>
+          </Button>
         </div>
       </div>
       {activeTab === 'catalog' ? (
         <>
           {/* Quick Stats Banner */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
-            <div className="bg-white p-6 rounded-[2rem] border-2 border-slate-100/80 border-b-4 border-b-amber-500 shadow-[0_8px_30px_rgb(0,0,0,0.015)] flex items-center space-x-4">
-              <div className="bg-amber-50 text-amber-600 p-3 rounded-2xl">
+            <div className="bg-surface p-6 rounded-[2rem] border-2 border-border/80 border-b-4 border-b-amber-500 shadow-[0_8px_30px_rgb(0,0,0,0.015)] flex items-center space-x-4">
+              <div className="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 p-3 rounded-2xl">
                 <Package className="h-6 w-6" />
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-display block">Articles Catalogués</span>
-                <span className="font-black text-slate-900 text-xl font-display">{items.length} références</span>
+                <span className="text-[10px] text-muted font-bold uppercase tracking-wider font-display block">Articles Catalogués</span>
+                <span className="font-black text-foreground text-xl font-display">{items.length} références</span>
               </div>
             </div>
-            <div className="bg-white p-6 rounded-[2rem] border-2 border-slate-100/80 border-b-4 border-b-rose-500 shadow-[0_8px_30px_rgb(0,0,0,0.015)] flex items-center space-x-4">
-              <div className={`p-3 rounded-2xl ${lowStockItemsCount > 0 ? 'bg-rose-50 text-rose-600 animate-pulse' : 'bg-emerald-50 text-emerald-800'}`}>
+            <div className="bg-surface p-6 rounded-[2rem] border-2 border-border/80 border-b-4 border-b-rose-500 shadow-[0_8px_30px_rgb(0,0,0,0.015)] flex items-center space-x-4">
+              <div className={`p-3 rounded-2xl ${lowStockItemsCount > 0 ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 animate-pulse' : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300'}`}>
                 <AlertTriangle className="h-6 w-6" />
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-display block">Stocks d'Alerte / Critique</span>
-                <span className={`font-black text-xl font-display ${lowStockItemsCount > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{lowStockItemsCount} articles</span>
+                <span className="text-[10px] text-muted font-bold uppercase tracking-wider font-display block">Stocks d'Alerte / Critique</span>
+                <span className={`font-black text-xl font-display ${lowStockItemsCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{lowStockItemsCount} articles</span>
               </div>
             </div>
-            <div className="bg-white p-6 rounded-[2rem] border-2 border-slate-100/80 border-b-4 border-b-indigo-500 shadow-[0_8px_30px_rgb(0,0,0,0.015)] flex items-center space-x-4">
-              <div className="bg-indigo-50 text-indigo-600 p-3 rounded-2xl">
+            <div className="bg-surface p-6 rounded-[2rem] border-2 border-border/80 border-b-4 border-b-indigo-500 shadow-[0_8px_30px_rgb(0,0,0,0.015)] flex items-center space-x-4">
+              <div className="bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 p-3 rounded-2xl">
                 <TrendingUp className="h-6 w-6" />
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-display block">Valorisation du Stock</span>
-                <span className="font-black text-indigo-900 text-xl font-display">{formatFCFA(totalStockValuation)}</span>
+                <span className="text-[10px] text-muted font-bold uppercase tracking-wider font-display block">Valorisation du Stock</span>
+                <span className="font-black text-indigo-900 dark:text-indigo-300 text-xl font-display">{formatFCFA(totalStockValuation)}</span>
               </div>
             </div>
           </div>
 
           {/* Filters and Actions bar */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-4 rounded-3xl border-2 border-slate-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.015)] mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-surface p-4 rounded-3xl border-2 border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.015)] mb-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
               {/* Search input */}
-              <div className="relative">
-                <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Rechercher nom, code, réf..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10 pr-4 py-2.5 w-full border border-slate-200 rounded-2xl text-xs focus:ring-2 focus:ring-amber-500 focus:outline-hidden bg-slate-50/50"
-                />
-              </div>
+              <Input
+                variant="search"
+                icon={<Search className="h-4 w-4" />}
+                placeholder="Rechercher nom, code, réf..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="rounded-2xl bg-neutral-50/50 text-xs"
+              />
 
               {/* Category Filter */}
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="py-2.5 px-3.5 border border-slate-200 rounded-2xl text-xs bg-white focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
+                className="py-2.5 px-3.5 border border-border rounded-2xl text-xs bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden"
               >
                 <option value="Tous">Toutes les catégories</option>
                 {categories.map(cat => (
@@ -261,45 +261,53 @@ export default function ItemsView({
               </select>
 
               {/* Stock Status Filter */}
-              <div className="flex bg-slate-100 p-1 rounded-2xl text-[11px] font-bold">
-                <button
+              <div className="flex gap-1.5 text-[11px] font-bold">
+                <Button
+                  size="sm"
+                  variant={statusFilter === 'all' ? 'primary' : 'secondary'}
                   onClick={() => setStatusFilter('all')}
-                  className={`flex-1 py-1.5 px-2 rounded-xl text-center transition-colors cursor-pointer ${statusFilter === 'all' ? 'bg-white text-slate-900 shadow-xs font-black' : 'text-slate-500 hover:text-slate-900'}`}
+                  className="flex-1"
                 >
                   Tous
-                </button>
-                <button
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
                   onClick={() => setStatusFilter('alert')}
-                  className={`flex-1 py-1.5 px-2 rounded-xl text-center transition-colors cursor-pointer ${statusFilter === 'alert' ? 'bg-white text-amber-700 shadow-xs font-black' : 'text-slate-500 hover:text-slate-900'}`}
+                  className={cn('flex-1', statusFilter === 'alert' && 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 shadow-xs font-black')}
                 >
                   Bas
-                </button>
-                <button
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
                   onClick={() => setStatusFilter('out')}
-                  className={`flex-1 py-1.5 px-2 rounded-xl text-center transition-colors cursor-pointer ${statusFilter === 'out' ? 'bg-white text-red-700 shadow-xs font-black' : 'text-slate-500 hover:text-slate-900'}`}
+                  className={cn('flex-1', statusFilter === 'out' && 'bg-rose-50 dark:bg-rose-950/30 border-rose-300 dark:border-rose-700 text-red-700 dark:text-red-400 shadow-xs font-black')}
                 >
                   Rupture
-                </button>
+                </Button>
               </div>
             </div>
 
             <div className="flex items-center space-x-2 shrink-0">
-              <button
+              <Button
+                variant="primary"
+                size="md"
                 onClick={() => setIsAddModalOpen(true)}
-                className="bg-amber-500 hover:bg-amber-600 text-slate-950 px-5 py-2.5 rounded-2xl text-xs font-black flex items-center space-x-1.5 cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
+                className="flex items-center space-x-1.5"
               >
                 <Plus className="h-4.5 w-4.5 stroke-[2.5]" />
                 <span>Nouvel Article</span>
-              </button>
+              </Button>
             </div>
           </div>
 
-          {/* Catalog Grid/Table */}
-          <div className="bg-white rounded-3xl border-2 border-slate-100/80 shadow-[0_10px_40px_rgb(0,0,0,0.015)] overflow-hidden">
+          {/* Catalog Grid/Table - Desktop */}
+          <div className="hidden md:block bg-surface rounded-3xl border-2 border-border/80 shadow-[0_10px_40px_rgb(0,0,0,0.015)] overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
+                  <tr className="bg-neutral-50 dark:bg-neutral-800 border-b border-border text-muted font-bold uppercase text-[10px] tracking-wider">
                     <th className="py-3.5 px-5">Code / Réf</th>
                     <th className="py-3.5 px-5">Nom de l'article</th>
                     <th className="py-3.5 px-5">Catégorie</th>
@@ -311,7 +319,7 @@ export default function ItemsView({
                     <th className="py-3.5 px-5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border">
                   {filteredItems.map((item) => {
                     const isLow = item.stockCount <= item.minStock;
                     const isOut = item.stockCount <= 0;
@@ -319,73 +327,76 @@ export default function ItemsView({
                     const marginPercent = Math.round((margin / item.sellingPrice) * 100);
 
                     return (
-                      <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-3.5 px-5 font-mono font-bold text-slate-400 text-[10px]">{item.ref}</td>
-                        <td className="py-3.5 px-5 font-semibold text-slate-900">
+                      <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
+                        <td className="py-3.5 px-5 font-mono font-bold text-muted text-[10px]">{item.ref}</td>
+                        <td className="py-3.5 px-5 font-semibold text-foreground">
                           <div>
-                            <span className="text-slate-900 font-bold text-xs block">{item.name}</span>
-                            {item.description && <span className="text-[10px] text-slate-400 block truncate max-w-[200px] mt-1 font-normal">{item.description}</span>}
+                            <span className="text-foreground font-bold text-xs block">{item.name}</span>
+                            {item.description && <span className="text-[10px] text-muted block truncate max-w-[200px] mt-1 font-normal">{item.description}</span>}
                           </div>
                         </td>
                         <td className="py-3.5 px-5">
-                          <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-slate-100 text-slate-600">
+                          <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-neutral-100 dark:bg-neutral-700 text-foreground">
                             {item.category}
                           </span>
                         </td>
-                        <td className="py-3.5 px-5 text-right font-mono text-slate-500 font-semibold">{formatFCFA(item.buyingPrice)}</td>
+                        <td className="py-3.5 px-5 text-right font-mono text-muted font-semibold">{formatFCFA(item.buyingPrice)}</td>
                         <td className="py-3.5 px-5 text-right">
-                          <div className="font-mono font-bold text-slate-900">{formatFCFA(item.sellingPrice)}</div>
-                          <div className="text-[9px] text-emerald-600 font-bold mt-0.5">Marge: +{marginPercent}%</div>
+                          <div className="font-mono font-bold text-foreground">{formatFCFA(item.sellingPrice)}</div>
+                          <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">Marge: +{marginPercent}%</div>
                         </td>
-                        <td className="py-3.5 px-5 text-center text-slate-400 font-bold">{item.unit}</td>
+                        <td className="py-3.5 px-5 text-center text-muted font-bold">{item.unit}</td>
                         <td className="py-3.5 px-5 text-center">
                           <div className="flex flex-col items-center">
                             <span className={`px-3 py-1 rounded-full font-black font-mono text-[11px] ${
-                              isOut ? 'bg-rose-100 text-rose-700 border border-rose-200' :
-                              isLow ? 'bg-amber-100 text-amber-700 border border-amber-200 animate-pulse' :
-                              'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              isOut ? 'bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800' :
+                              isLow ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 animate-pulse' :
+                              'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                             }`}>
                               {item.stockCount} {item.unit}(s)
                             </span>
-                            <span className="text-[9px] text-slate-400 mt-1 font-bold">Min: {item.minStock}</span>
+                            <span className="text-[9px] text-muted mt-1 font-bold">Min: {item.minStock}</span>
                           </div>
                         </td>
                         <td className="py-3.5 px-5 text-center">
                           <div className="flex justify-center space-x-1.5">
-                            <button
+                            <Button
+                              variant="icon"
                               onClick={() => handleOpenAdjust(item, 'ENTREE')}
                               title="Ajouter du Stock (Entrée)"
-                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors border border-emerald-100 cursor-pointer"
+                              className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800"
                             >
                               <PlusCircle className="h-4 w-4" />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                              variant="icon"
                               onClick={() => handleOpenAdjust(item, 'SORTIE')}
                               title="Diminuer du Stock (Sortie/Perte)"
-                              className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors border border-rose-100 cursor-pointer"
+                              className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-100 dark:border-rose-800"
                             >
                               <MinusCircle className="h-4 w-4" />
-                            </button>
+                            </Button>
                           </div>
                         </td>
                         <td className="py-3.5 px-5 text-right">
                           <div className="flex items-center justify-end space-x-1">
-                            <button
+                            <Button
+                              variant="icon"
                               onClick={() => setEditingItem(item)}
-                              className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg cursor-pointer"
                             >
                               <Edit className="h-4 w-4" />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                              variant="icon"
                               onClick={() => {
                                 if (confirm(`Êtes-vous sûr de vouloir supprimer l'article ${item.name} ?`)) {
                                   onDeleteItem(item.id);
                                 }
                               }}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer"
+                              className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
                             >
                               <Trash2 className="h-4 w-4" />
-                            </button>
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -393,7 +404,7 @@ export default function ItemsView({
                   })}
                   {filteredItems.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="py-12 text-center text-slate-400 font-mono italic">
+                      <td colSpan={9} className="py-12 text-center text-muted font-mono italic">
                         Aucun article correspondant à la recherche ou au filtre.
                       </td>
                     </tr>
@@ -402,28 +413,113 @@ export default function ItemsView({
               </table>
             </div>
           </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-3">
+            {filteredItems.map((item) => {
+              const isLow = item.stockCount <= item.minStock;
+              const isOut = item.stockCount <= 0;
+              const margin = item.sellingPrice - item.buyingPrice;
+              const marginPercent = Math.round((margin / item.sellingPrice) * 100);
+
+              return (
+                <div key={item.id} className="bg-surface p-4 rounded-xl border border-border">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-bold text-foreground text-sm">{item.name}</p>
+                      <p className="text-xs text-muted font-mono">{item.ref}</p>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full font-black font-mono text-[11px] ${
+                      isOut ? 'bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400' :
+                      isLow ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 animate-pulse' :
+                      'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300'
+                    }`}>
+                      {item.stockCount}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-neutral-100 dark:bg-neutral-700 text-muted">{item.category}</span>
+                    <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-neutral-100 dark:bg-neutral-700 text-muted">{item.unit}</span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-muted font-semibold">Achat</span>
+                      <p className="font-mono font-bold text-foreground">{formatFCFA(item.buyingPrice)}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted font-semibold">Vente</span>
+                      <p className="font-mono font-bold text-foreground">{formatFCFA(item.sellingPrice)}</p>
+                      <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">Marge: +{marginPercent}%</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex justify-between items-center pt-3 border-t border-border">
+                    <div className="flex gap-1.5">
+                      <Button
+                        variant="icon"
+                        onClick={() => handleOpenAdjust(item, 'ENTREE')}
+                        title="Ajouter du Stock (Entrée)"
+                        className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800"
+                      >
+                        <PlusCircle className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="icon"
+                        onClick={() => handleOpenAdjust(item, 'SORTIE')}
+                        title="Diminuer du Stock (Sortie/Perte)"
+                        className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-100 dark:border-rose-800"
+                      >
+                        <MinusCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="icon"
+                        onClick={() => setEditingItem(item)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="icon"
+                        onClick={() => {
+                          if (confirm(`Êtes-vous sûr de vouloir supprimer l'article ${item.name} ?`)) {
+                            onDeleteItem(item.id);
+                          }
+                        }}
+                        className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {filteredItems.length === 0 && (
+              <div className="py-12 text-center text-muted font-mono italic bg-surface rounded-xl border border-dashed border-border">
+                Aucun article correspondant à la recherche ou au filtre.
+              </div>
+            )}
+          </div>
         </>
       ) : (
         /* History movements tab */
-        <div className="bg-white p-6 rounded-[2rem] border-2 border-slate-100/80 shadow-[0_10px_40px_rgb(0,0,0,0.015)] space-y-6">
+        <div className="bg-surface p-6 rounded-[2rem] border-2 border-border/80 shadow-[0_10px_40px_rgb(0,0,0,0.015)] space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h3 className="text-sm font-black text-slate-900 font-display uppercase tracking-wider">Registre des Mouvements physiques (Entrées / Sorties)</h3>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Filtrer par article ou référence..."
-                value={historySearch}
-                onChange={(e) => setHistorySearch(e.target.value)}
-                className="pl-10 pr-4 py-2.5 w-full border border-slate-200 rounded-2xl text-xs focus:ring-2 focus:ring-amber-500 focus:outline-hidden bg-slate-50/50"
-              />
-            </div>
+            <h3 className="text-sm font-black text-foreground font-display uppercase tracking-wider">Registre des Mouvements physiques (Entrées / Sorties)</h3>
+            <Input
+              variant="search"
+              icon={<Search className="h-4 w-4" />}
+              placeholder="Filtrer par article ou référence..."
+              value={historySearch}
+              onChange={(e) => setHistorySearch(e.target.value)}
+              className="w-full sm:w-64 rounded-2xl bg-neutral-50/50 text-xs"
+            />
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-slate-100">
+          <div className="overflow-x-auto rounded-2xl border border-border">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
+                <tr className="bg-neutral-50 dark:bg-neutral-800 border-b border-border text-muted font-bold uppercase text-[10px] tracking-wider">
                   <th className="py-3 px-4">Date</th>
                   <th className="py-3 px-4">Article</th>
                   <th className="py-3 px-4 text-center">Type</th>
@@ -433,31 +529,31 @@ export default function ItemsView({
                   <th className="py-3 px-4 text-right">Opérateur</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {filteredMovements.map((mov) => (
-                  <tr key={mov.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 px-4 font-mono text-slate-400 text-[11px] font-semibold">{mov.date}</td>
-                    <td className="py-3 px-4 font-bold text-slate-900">{mov.itemName}</td>
+                  <tr key={mov.id} className="hover:bg-neutral-50/50 transition-colors">
+                    <td className="py-3 px-4 font-mono text-muted text-[11px] font-semibold">{mov.date}</td>
+                    <td className="py-3 px-4 font-bold text-foreground">{mov.itemName}</td>
                     <td className="py-3 px-4 text-center">
                       <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
-                        mov.type === 'ENTREE' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-700'
+                        mov.type === 'ENTREE' ? 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300' : 'bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400'
                       }`}>
                         {mov.type}
                       </span>
                     </td>
                     <td className={`py-3 px-4 text-center font-mono font-black text-xs ${
-                      mov.type === 'ENTREE' ? 'text-emerald-700' : 'text-rose-600'
+                      mov.type === 'ENTREE' ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                     }`}>
                       {mov.type === 'ENTREE' ? '+' : '-'}{mov.quantity}
                     </td>
-                    <td className="py-3 px-4 text-slate-600 font-semibold">{mov.reason}</td>
-                    <td className="py-3 px-4 font-mono text-slate-400 text-[11px] font-bold">{mov.referenceCode}</td>
-                    <td className="py-3 px-4 text-right text-slate-500 font-bold">{mov.operator}</td>
+                    <td className="py-3 px-4 text-foreground font-semibold">{mov.reason}</td>
+                    <td className="py-3 px-4 font-mono text-muted text-[11px] font-bold">{mov.referenceCode}</td>
+                    <td className="py-3 px-4 text-right text-muted font-bold">{mov.operator}</td>
                   </tr>
                 ))}
                 {filteredMovements.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-400 italic font-mono">
+                    <td colSpan={7} className="py-8 text-center text-muted italic font-mono">
                       Aucun mouvement de stock enregistré.
                     </td>
                   </tr>
@@ -469,397 +565,345 @@ export default function ItemsView({
       )}
 
       {/* MODAL 1: ADD NEW ITEM */}
-      <AnimatePresence>
-        {isAddModalOpen && (
-          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-2 border-slate-100 max-w-lg w-full overflow-hidden"
-            >
-              <div className="flex items-center justify-between bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 px-6 py-5 border-b-2 border-amber-500">
-                <h3 className="font-black font-display text-sm uppercase tracking-wider">Ajouter un nouvel article au catalogue</h3>
-                <button onClick={() => setIsAddModalOpen(false)} className="text-slate-950 hover:text-white cursor-pointer transition-colors">
-                  <X className="h-5 w-5 stroke-[2.5]" />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddSubmit} className="p-6 space-y-4 text-xs">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Référence / SKU *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. SOC-CPJ-42.5"
-                      value={newItemRef}
-                      onChange={(e) => setNewItemRef(e.target.value.toUpperCase())}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-mono focus:ring-2 focus:ring-amber-500 focus:outline-hidden bg-slate-50/50"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Catégorie *</label>
-                    <select
-                      value={newItemCategory}
-                      onChange={(e) => setNewItemCategory(e.target.value as Category)}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl bg-white focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-bold"
-                    >
-                      {categories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-slate-600 font-bold mb-1">Nom de l'article *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Ciment SOCOCIM CPJ 42.5 (Sac 50kg)"
-                    value={newItemName}
-                    onChange={(e) => setNewItemName(e.target.value)}
-                    className="w-full border border-slate-200 p-2.5 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-bold bg-slate-50/50"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Unité de mesure</label>
-                    <input
-                      type="text"
-                      placeholder="Sac, Barre, Litre, etc."
-                      value={newItemUnit}
-                      onChange={(e) => setNewItemUnit(e.target.value)}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-bold bg-slate-50/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Stock de Sécurité *</label>
-                    <input
-                      type="number"
-                      value={newItemMinStock}
-                      onChange={(e) => setNewItemMinStock(Number(e.target.value))}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-amber-500 focus:outline-hidden bg-slate-50/50"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Stock Initial</label>
-                    <input
-                      type="number"
-                      value={newItemInitialQty}
-                      onChange={(e) => setNewItemInitialQty(Number(e.target.value))}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-amber-500 focus:outline-hidden bg-slate-50/50"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Prix d'Achat Unitaire (FCFA) *</label>
-                    <input
-                      type="number"
-                      value={newItemBuying}
-                      onChange={(e) => setNewItemBuying(Number(e.target.value))}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-amber-500 focus:outline-hidden bg-slate-50/50 text-slate-700"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Prix de Vente Unitaire (FCFA) *</label>
-                    <input
-                      type="number"
-                      value={newItemSelling}
-                      onChange={(e) => setNewItemSelling(Number(e.target.value))}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-mono font-black focus:ring-2 focus:ring-amber-500 focus:outline-hidden bg-slate-50/50 text-slate-900"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-slate-600 font-bold mb-1">Description</label>
-                  <textarea
-                    placeholder="Détails additionnels du produit..."
-                    value={newItemDesc}
-                    onChange={(e) => setNewItemDesc(e.target.value)}
-                    className="w-full border border-slate-200 p-2.5 rounded-xl h-20 focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-medium bg-slate-50/50"
-                  />
-                </div>
-
-                <div className="border-t border-slate-100 pt-4 grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-slate-400 font-bold mb-1">Opérateur effectuant l'ajout</label>
-                    <input
-                      type="text"
-                      value={operatorName}
-                      onChange={(e) => setOperatorName(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl font-bold text-slate-700 focus:outline-hidden"
-                    />
-                  </div>
-                  <div className="flex items-end justify-end space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsAddModalOpen(false)}
-                      className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer transition-colors"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl font-black cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
-                    >
-                      Enregistrer
-                    </button>
-                  </div>
-                </div>
-              </form>
-            </motion.div>
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Ajouter un nouvel article au catalogue"
+        icon={Package}
+        size="lg"
+        footer={
+          <div className="flex items-end justify-end space-x-2">
+            <Button variant="secondary" onClick={() => setIsAddModalOpen(false)}>
+              Annuler
+            </Button>
+            <Button variant="primary" type="submit" form="add-item-form">
+              Enregistrer
+            </Button>
           </div>
-        )}
-      </AnimatePresence>
+        }
+      >
+        <form id="add-item-form" onSubmit={handleAddSubmit} className="space-y-4 text-xs">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-muted font-bold mb-1">Référence / SKU *</label>
+              <input
+                type="text"
+                placeholder="e.g. SOC-CPJ-42.5"
+                value={newItemRef}
+                onChange={(e) => setNewItemRef(e.target.value.toUpperCase())}
+                className="w-full border border-border p-2.5 rounded-xl font-mono focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-muted font-bold mb-1">Catégorie *</label>
+              <select
+                value={newItemCategory}
+                onChange={(e) => setNewItemCategory(e.target.value as Category)}
+                className="w-full border border-border p-2.5 rounded-xl bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden font-bold"
+              >
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-muted font-bold mb-1">Nom de l'article *</label>
+            <input
+              type="text"
+              placeholder="e.g. Ciment SOCOCIM CPJ 42.5 (Sac 50kg)"
+              value={newItemName}
+              onChange={(e) => setNewItemName(e.target.value)}
+              className="w-full border border-border p-2.5 rounded-xl focus:ring-2 focus:ring-primary focus:outline-hidden font-bold bg-neutral-50/50"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-muted font-bold mb-1">Unité de mesure</label>
+              <input
+                type="text"
+                placeholder="Sac, Barre, Litre, etc."
+                value={newItemUnit}
+                onChange={(e) => setNewItemUnit(e.target.value)}
+                className="w-full border border-border p-2.5 rounded-xl focus:ring-2 focus:ring-primary focus:outline-hidden font-bold bg-neutral-50/50"
+              />
+            </div>
+            <div>
+              <label className="block text-muted font-bold mb-1">Stock de Sécurité *</label>
+              <input
+                type="number"
+                value={newItemMinStock}
+                onChange={(e) => setNewItemMinStock(Number(e.target.value))}
+                className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-muted font-bold mb-1">Stock Initial</label>
+              <input
+                type="number"
+                value={newItemInitialQty}
+                onChange={(e) => setNewItemInitialQty(Number(e.target.value))}
+                className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-muted font-bold mb-1">Prix d'Achat Unitaire (FCFA) *</label>
+              <input
+                type="number"
+                value={newItemBuying}
+                onChange={(e) => setNewItemBuying(Number(e.target.value))}
+                className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 text-foreground"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-muted font-bold mb-1">Prix de Vente Unitaire (FCFA) *</label>
+              <input
+                type="number"
+                value={newItemSelling}
+                onChange={(e) => setNewItemSelling(Number(e.target.value))}
+                className="w-full border border-border p-2.5 rounded-xl font-mono font-black focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 text-foreground"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-muted font-bold mb-1">Description</label>
+            <textarea
+              placeholder="Détails additionnels du produit..."
+              value={newItemDesc}
+              onChange={(e) => setNewItemDesc(e.target.value)}
+              className="w-full border border-border p-2.5 rounded-xl h-20 focus:ring-2 focus:ring-primary focus:outline-hidden font-medium bg-neutral-50/50"
+            />
+          </div>
+
+          <div className="border-t border-border pt-4 grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-muted font-bold mb-1">Opérateur effectuant l'ajout</label>
+              <input
+                type="text"
+                value={operatorName}
+                onChange={(e) => setOperatorName(e.target.value)}
+                className="w-full bg-neutral-50 border border-border p-2.5 rounded-xl font-bold text-foreground focus:outline-hidden"
+              />
+            </div>
+          </div>
+        </form>
+      </Modal>
 
       {/* MODAL 2: ADJUST STOCK (ENTRY/EXIT) */}
-      <AnimatePresence>
-        {isAdjustModalOpen && selectedItem && (
-          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-2 border-slate-100 max-w-md w-full overflow-hidden"
-            >
-              <div className={`px-6 py-5 text-slate-950 flex items-center justify-between border-b-2 ${
-                adjustType === 'ENTREE' ? 'bg-gradient-to-r from-emerald-400 to-emerald-500 border-emerald-500' : 'bg-gradient-to-r from-rose-400 to-rose-500 border-rose-500'
-              }`}>
-                <h3 className="font-black font-display text-sm uppercase tracking-wider">
-                  {adjustType === 'ENTREE' ? 'Entrée de Stock (Réappro)' : 'Sortie de Stock (Ajustement)'}
-                </h3>
-                <button onClick={() => { setIsAdjustModalOpen(false); setSelectedItem(null); }} className="text-slate-950 hover:text-white cursor-pointer transition-colors">
-                  <X className="h-5 w-5 stroke-[2.5]" />
-                </button>
-              </div>
-
-              <form onSubmit={handleAdjustSubmit} className="p-6 space-y-4 text-xs">
-                <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100/50">
-                  <span className="text-[10px] text-slate-400 block font-black uppercase tracking-wider">Article Sélectionné</span>
-                  <span className="font-black text-slate-900 text-xs block mt-1">{selectedItem.name}</span>
-                  <span className="text-[11px] font-bold text-slate-600 block mt-1.5">
-                    Stock Actuel: <span className="font-mono font-black text-amber-600">{selectedItem.stockCount} {selectedItem.unit}(s)</span>
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Quantité à {adjustType === 'ENTREE' ? 'ajouter' : 'déduire'} *</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={adjustQty}
-                      onChange={(e) => setAdjustQty(Math.max(1, Number(e.target.value)))}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-mono font-black focus:ring-2 focus:ring-amber-500 focus:outline-hidden bg-slate-50/50"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Raison du mouvement *</label>
-                    <select
-                      value={adjustReason}
-                      onChange={(e) => setAdjustReason(e.target.value as StockMovement['reason'])}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl bg-white focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-bold"
-                    >
-                      {adjustType === 'ENTREE' ? (
-                        <>
-                          <option value="Achat Fournisseur">Achat Fournisseur (Arrivage)</option>
-                          <option value="Retour Client">Retour de marchandise Client</option>
-                          <option value="Ajustement Inventaire">Ajustement Inventaire (+)</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="Perte / Casse">Perte / Vol / Casse</option>
-                          <option value="Ajustement Inventaire">Ajustement Inventaire (-)</option>
-                        </>
-                      )}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Code Réf / N° Bon</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. BON-ACHAT-412"
-                      value={adjustRefCode}
-                      onChange={(e) => setAdjustRefCode(e.target.value.toUpperCase())}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-amber-500 focus:outline-hidden bg-slate-50/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Opérateur effectuant l'action *</label>
-                    <input
-                      type="text"
-                      value={operatorName}
-                      onChange={(e) => setOperatorName(e.target.value)}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-bold focus:ring-2 focus:ring-amber-500 focus:outline-hidden bg-slate-50/50"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="border-t border-slate-100 pt-4 flex justify-end space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => { setIsAdjustModalOpen(false); setSelectedItem(null); }}
-                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer transition-colors"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    className={`px-5 py-2.5 text-slate-950 font-black rounded-xl cursor-pointer transition-all hover:scale-[1.02] ${
-                      adjustType === 'ENTREE' ? 'bg-emerald-400 hover:bg-emerald-500' : 'bg-rose-400 hover:bg-rose-500'
-                    }`}
-                  >
-                    Valider le mouvement
-                  </button>
-                </div>
-              </form>
-            </motion.div>
+      <Modal
+        isOpen={isAdjustModalOpen && !!selectedItem}
+        onClose={() => { setIsAdjustModalOpen(false); setSelectedItem(null); }}
+        title={adjustType === 'ENTREE' ? 'Entrée de Stock (Réappro)' : 'Sortie de Stock (Ajustement)'}
+        icon={History}
+        size="md"
+        variant={adjustType === 'SORTIE' ? 'danger' : 'default'}
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button variant="secondary" onClick={() => { setIsAdjustModalOpen(false); setSelectedItem(null); }}>
+              Annuler
+            </Button>
+            <Button variant={adjustType === 'ENTREE' ? 'success' : 'danger'} type="submit" form="adjust-stock-form">
+              Valider le mouvement
+            </Button>
           </div>
-        )}
-      </AnimatePresence>
-
-      {/* EDIT MODAL */}
-      <AnimatePresence>
-        {editingItem && (
-          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-2 border-slate-100 max-w-lg w-full overflow-hidden"
-            >
-              <div className="flex items-center justify-between bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-6 py-5 border-b-2 border-indigo-600">
-                <h3 className="font-black font-display text-sm uppercase tracking-wider">Modifier l'article : {editingItem.name}</h3>
-                <button onClick={() => setEditingItem(null)} className="text-white hover:text-slate-100 cursor-pointer transition-colors">
-                  <X className="h-5 w-5 stroke-[2.5]" />
-                </button>
+        }
+      >
+        <form id="adjust-stock-form" onSubmit={handleAdjustSubmit} className="space-y-4 text-xs">
+          {selectedItem && (
+            <>
+              <div className="bg-neutral-50 p-4 rounded-2xl border-2 border-border/50">
+                <span className="text-[10px] text-muted block font-black uppercase tracking-wider">Article Sélectionné</span>
+                <span className="font-black text-foreground text-xs block mt-1">{selectedItem.name}</span>
+                <span className="text-[11px] font-bold text-foreground block mt-1.5">
+                  Stock Actuel: <span className="font-mono font-black text-amber-600">{selectedItem.stockCount} {selectedItem.unit}(s)</span>
+                </span>
               </div>
 
-              <form onSubmit={handleEditSubmit} className="p-6 space-y-4 text-xs">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Référence / SKU *</label>
-                    <input
-                      type="text"
-                      value={editingItem.ref}
-                      onChange={(e) => setEditingItem({ ...editingItem, ref: e.target.value.toUpperCase() })}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-hidden bg-slate-50/50"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Catégorie *</label>
-                    <select
-                      value={editingItem.category}
-                      onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value as Category })}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden font-bold"
-                    >
-                      {categories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-600 font-bold mb-1">Nom de l'article *</label>
+                  <label className="block text-muted font-bold mb-1">Quantité à {adjustType === 'ENTREE' ? 'ajouter' : 'déduire'} *</label>
                   <input
-                    type="text"
-                    value={editingItem.name}
-                    onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
-                    className="w-full border border-slate-200 p-2.5 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-hidden font-bold bg-slate-50/50"
+                    type="number"
+                    min="1"
+                    value={adjustQty}
+                    onChange={(e) => setAdjustQty(Math.max(1, Number(e.target.value)))}
+                    className="w-full border border-border p-2.5 rounded-xl font-mono font-black focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
                     required
                   />
                 </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Unité de mesure</label>
-                    <input
-                      type="text"
-                      value={editingItem.unit}
-                      onChange={(e) => setEditingItem({ ...editingItem, unit: e.target.value })}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Stock de Sécurité Minimal *</label>
-                    <input
-                      type="number"
-                      value={editingItem.minStock}
-                      onChange={(e) => setEditingItem({ ...editingItem, minStock: Number(e.target.value) })}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-hidden bg-slate-50/50"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Prix d'Achat (FCFA) *</label>
-                    <input
-                      type="number"
-                      value={editingItem.buyingPrice}
-                      onChange={(e) => setEditingItem({ ...editingItem, buyingPrice: Number(e.target.value) })}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-hidden bg-slate-50/50 text-slate-700"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-bold mb-1">Prix de Vente (FCFA) *</label>
-                    <input
-                      type="number"
-                      value={editingItem.sellingPrice}
-                      onChange={(e) => setEditingItem({ ...editingItem, sellingPrice: Number(e.target.value) })}
-                      className="w-full border border-slate-200 p-2.5 rounded-xl font-mono font-black focus:ring-2 focus:ring-indigo-500 focus:outline-hidden bg-slate-50/50 text-slate-900"
-                      required
-                    />
-                  </div>
-                </div>
-
                 <div>
-                  <label className="block text-slate-600 font-bold mb-1">Description</label>
-                  <textarea
-                    value={editingItem.description || ''}
-                    onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
-                    className="w-full border border-slate-200 p-2.5 rounded-xl h-20 focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 font-medium"
+                  <label className="block text-muted font-bold mb-1">Raison du mouvement *</label>
+                  <select
+                    value={adjustReason}
+                    onChange={(e) => setAdjustReason(e.target.value as StockMovement['reason'])}
+                    className="w-full border border-border p-2.5 rounded-xl bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden font-bold"
+                  >
+                    {adjustType === 'ENTREE' ? (
+                      <>
+                        <option value="Achat Fournisseur">Achat Fournisseur (Arrivage)</option>
+                        <option value="Retour Client">Retour de marchandise Client</option>
+                        <option value="Ajustement Inventaire">Ajustement Inventaire (+)</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="Perte / Casse">Perte / Vol / Casse</option>
+                        <option value="Ajustement Inventaire">Ajustement Inventaire (-)</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-muted font-bold mb-1">Code Réf / N° Bon</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. BON-ACHAT-412"
+                    value={adjustRefCode}
+                    onChange={(e) => setAdjustRefCode(e.target.value.toUpperCase())}
+                    className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
                   />
                 </div>
-
-                <div className="border-t border-slate-100 pt-4 flex justify-end space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => setEditingItem(null)}
-                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer transition-colors"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
-                  >
-                    Sauvegarder les modifications
-                  </button>
+                <div>
+                  <label className="block text-muted font-bold mb-1">Opérateur effectuant l'action *</label>
+                  <input
+                    type="text"
+                    value={operatorName}
+                    onChange={(e) => setOperatorName(e.target.value)}
+                    className="w-full border border-border p-2.5 rounded-xl font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                    required
+                  />
                 </div>
-              </form>
-            </motion.div>
+              </div>
+            </>
+          )}
+        </form>
+      </Modal>
+
+      {/* EDIT MODAL */}
+      <Modal
+        isOpen={!!editingItem}
+        onClose={() => setEditingItem(null)}
+        title={`Modifier l'article : ${editingItem?.name || ''}`}
+        icon={Edit}
+        size="lg"
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button variant="secondary" onClick={() => setEditingItem(null)}>
+              Annuler
+            </Button>
+            <Button variant="primary" type="submit" form="edit-item-form">
+              Sauvegarder les modifications
+            </Button>
           </div>
+        }
+      >
+        {editingItem && (
+          <form id="edit-item-form" onSubmit={handleEditSubmit} className="space-y-4 text-xs">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-muted font-bold mb-1">Référence / SKU *</label>
+                <input
+                  type="text"
+                  value={editingItem.ref}
+                  onChange={(e) => setEditingItem({ ...editingItem, ref: e.target.value.toUpperCase() })}
+                  className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-muted font-bold mb-1">Catégorie *</label>
+                <select
+                  value={editingItem.category}
+                  onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value as Category })}
+                  className="w-full border border-border p-2.5 rounded-xl bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden font-bold"
+                >
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-muted font-bold mb-1">Nom de l'article *</label>
+              <input
+                type="text"
+                value={editingItem.name}
+                onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                className="w-full border border-border p-2.5 rounded-xl focus:ring-2 focus:ring-primary focus:outline-hidden font-bold bg-neutral-50/50"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-muted font-bold mb-1">Unité de mesure</label>
+                <input
+                  type="text"
+                  value={editingItem.unit}
+                  onChange={(e) => setEditingItem({ ...editingItem, unit: e.target.value })}
+                  className="w-full border border-border p-2.5 rounded-xl focus:ring-2 focus:ring-primary bg-neutral-50/50 font-semibold"
+                />
+              </div>
+              <div>
+                <label className="block text-muted font-bold mb-1">Stock de Sécurité Minimal *</label>
+                <input
+                  type="number"
+                  value={editingItem.minStock}
+                  onChange={(e) => setEditingItem({ ...editingItem, minStock: Number(e.target.value) })}
+                  className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-muted font-bold mb-1">Prix d'Achat (FCFA) *</label>
+                <input
+                  type="number"
+                  value={editingItem.buyingPrice}
+                  onChange={(e) => setEditingItem({ ...editingItem, buyingPrice: Number(e.target.value) })}
+                  className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 text-foreground"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-muted font-bold mb-1">Prix de Vente (FCFA) *</label>
+                <input
+                  type="number"
+                  value={editingItem.sellingPrice}
+                  onChange={(e) => setEditingItem({ ...editingItem, sellingPrice: Number(e.target.value) })}
+                  className="w-full border border-border p-2.5 rounded-xl font-mono font-black focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 text-foreground"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-muted font-bold mb-1">Description</label>
+              <textarea
+                value={editingItem.description || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+                className="w-full border border-border p-2.5 rounded-xl h-20 focus:ring-2 focus:ring-primary bg-neutral-50/50 font-medium"
+              />
+            </div>
+          </form>
         )}
-      </AnimatePresence>
+      </Modal>
     </div>
   );
 }
