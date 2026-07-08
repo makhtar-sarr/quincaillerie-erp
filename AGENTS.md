@@ -7,8 +7,9 @@ Système de gestion (React 19 + Vite) pour quincailleries sénégalaises : stock
 - `npm install` — install dependencies (Node.js required)
 - `npm run dev` — dev server on port 3000 (`vite --port=3000 --host=0.0.0.0`)
 - `npm run build` — `vite build` (bundle only; this is the artifact AI Studio serves)
+- `npm run preview` — `vite preview` (preview production build locally)
 - `npm run lint` — **there is no real linter**; this script is just `tsc --noEmit` (type-check only)
-- `npm run clean` — removes `dist/` and `server.js`
+- `npm run clean` — removes `dist/` and `server.js` (generated AI Studio artifact)
 - No test suite exists. Do not add test commands expecting one.
 
 ## Architecture
@@ -19,6 +20,20 @@ Système de gestion (React 19 + Vite) pour quincailleries sénégalaises : stock
 - **Path alias**: `@/*` → repo root (set in both `vite.config.ts` and `tsconfig.json`). Import shared code via `@/types`, `@/utils/data`, `@/lib/firebase`.
 - **Types**: `src/types.ts` is the single source of truth for domain models (Item, StockMovement, Customer, Supplier, Quote, Invoice, StoreSettings). Edit here first when changing shapes.
 - **Seed/reference data**: `src/utils/data.ts` (DEFAULT_SETTINGS, INITIAL_ITEMS, etc.) — used to bootstrap localStorage on first load.
+- **Views** (6 components in `src/components/`): `DashboardView`, `ItemsView` (catalogue + stock), `DevisView` (quotes), `InvoicesView` (sales), `ContactsView` (clients + fournisseurs), `SettingsView`.
+
+## Frontend stack specifics
+
+- **Tailwind CSS v4** — configured via `@tailwindcss/vite` plugin in `vite.config.ts`. There is **no `tailwind.config.*` or `postcss.config.*`** file. Theme is extended in `src/index.css` using `@theme` directive. Do not expect PostCSS-based Tailwind.
+- **Custom fonts**: Inter (sans), Outfit (display), JetBrains Mono (mono) loaded via `@import` in `src/index.css` with `@theme` tokens `--font-sans`, `--font-display`, `--font-mono`.
+- **Animation**: `motion` v12, imported as `motion/react` (the post-framer-motion package). Do not import from `framer-motion`.
+- **Icons**: `lucide-react` throughout.
+
+## Server-side dependencies (AI Studio runtime, not in `src/`)
+
+- `package.json` includes `express`, `@google/genai`, `dotenv` — **these are never imported in `src/` code**. They are used by AI Studio's generated `server.js` for the server-side Gemini API capability declared in `metadata.json`.
+- `npm run clean` removes the generated `server.js`. It is not committed.
+- `GEMINI_API_KEY` is **required** for Gemini calls but injected at runtime by AI Studio from user secrets — never commit it. `.env*` is gitignored except `.env.example`.
 
 ## Firebase (cloud backup only)
 
@@ -26,17 +41,17 @@ Système de gestion (React 19 + Vite) pour quincailleries sénégalaises : stock
 - Only the `backups` collection is used: `saveBackupToCloud`, `getBackupsFromCloud`, `deleteBackupFromCloud`.
 - `firestore.rules` makes backups **immutable**: `create`/`delete`/`list`/`get` allowed but `update: if false`. A backup must contain exactly 7 keys under `data` (settings, items, movements, customers, suppliers, quotes, invoices) or writes are rejected.
 - Firebase init is wrapped in try/catch and exposes `isFirebaseAvailable`; callers must handle the offline/unavailable case.
+- `firebase-blueprint.json` declares the Firestore schema for AI Studio's integration layer.
 
 ## Environment & AI Studio quirks
 
-- `GEMINI_API_KEY` is **required** for Gemini calls but injected at runtime by AI Studio from user secrets — never commit it. `.env*` is gitignored except `.env.example`.
 - `vite.config.ts` HMR behavior is gated by `DISABLE_HMR`: when `true`, HMR and file watching are disabled to avoid flicker during agent edits. **Do not modify this logic** — it is intentional for the AI Studio runtime.
-- `metadata.json` declares capability `MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API`; `@google/genai` is the SDK for server-side Gemini.
+- No CI, no pre-commit hooks, no lint config beyond `tsconfig.json`.
 
 ## Domain conventions (easy to break)
 
 - **Currency is FCFA**, integers (no decimals). Money math uses raw numbers, not floating-point formats.
-- **French UI**; IDs/numbers follow fixed formats: invoices `FAC-2026-XXX`, quotes `DEV-2026-XXX`, items `prod-<timestamp>`, movements `mov-<timestamp>`. Changing these breaks restore/reference matching.
+- **French UI**; IDs/numbers follow fixed formats: invoices `FAC-2026-XXX`, quotes `DEV-2026-XXX`, receipts `REC-<timestamp>`, items `prod-<timestamp>`, customers `cust-<timestamp>`, suppliers `supp-<timestamp>`, movements `mov-<timestamp>`. Changing these breaks restore/reference matching.
 - **Invoice creation has side effects**: `handleAddInvoice` decrements item stock, logs SORTIE movements, and updates customer `outstandingBalance`. `handleDeleteInvoice` reverses all of this. Keep these in sync if you touch invoicing.
 - Quote → Invoice conversion reuses quote totals via `handleConvertQuoteToInvoice`.
 - Stock movements use `type: 'ENTREE' | 'SORTIE'` and a fixed `reason` enum (see `StockMovement` in `src/types.ts`).
