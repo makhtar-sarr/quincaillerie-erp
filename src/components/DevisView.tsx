@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   FileText, 
@@ -20,8 +20,9 @@ import {
   QrCode,
   AlertTriangle
 } from 'lucide-react';
-import { Quote, Item, Customer, LineItem } from '../types';
+import { Quote, Item, Customer } from '../types';
 import { formatFCFA } from '../utils/data';
+import { useQuoteForm } from '../hooks/useQuoteForm';
 
 interface DevisViewProps {
   quotes: Quote[];
@@ -42,133 +43,42 @@ export default function DevisView({
   onDeleteQuote,
   onConvertQuoteToInvoice
 }: DevisViewProps) {
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('Tous');
-  
-  // Wizards state
+  // UI-only state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedQuoteForPrint, setSelectedQuoteForPrint] = useState<Quote | null>(null);
   const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [quoteToConvert, setQuoteToConvert] = useState<Quote | null>(null);
-
-  // Quote Creator Form state
-  const [customerId, setCustomerId] = useState('');
-  const [quoteDate, setQuoteDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [quoteExpiry, setQuoteExpiry] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 30); // 30 days validity
-    return d.toISOString().split('T')[0];
-  });
-  const [quoteLines, setQuoteLines] = useState<LineItem[]>([]);
-  const [discount, setDiscount] = useState<number>(0);
-  const [notes, setNotes] = useState('');
-
-  // Line Creator Temp state
-  const [tempItemId, setTempItemId] = useState('');
-  const [tempQty, setTempQty] = useState(1);
-  const [tempPrice, setTempPrice] = useState(0);
 
   // Conversion wizard state
   const [convertPaymentMethod, setConvertPaymentMethod] = useState<'Espèces' | 'Wave' | 'Orange Money' | 'Chèque' | 'Virement'>('Espèces');
   const [convertAmountPaid, setConvertAmountPaid] = useState<number>(0);
   const [convertOperator, setConvertOperator] = useState('Abdou');
 
-  // Filter quotes
-  const filteredQuotes = useMemo(() => {
-    return quotes.filter(q => {
-      const matchSearch = q.number.toLowerCase().includes(search.toLowerCase()) ||
-                          q.customerName.toLowerCase().includes(search.toLowerCase());
-      const matchStatus = statusFilter === 'Tous' || q.status === statusFilter;
-      return matchSearch && matchStatus;
-    }).sort((a, b) => b.number.localeCompare(a.number));
-  }, [quotes, search, statusFilter]);
+  // Quote form logic via hook
+  const {
+    search, setSearch,
+    statusFilter, setStatusFilter,
+    filteredQuotes,
+    customerId, setCustomerId,
+    quoteDate, setQuoteDate,
+    expiryDate, setExpiryDate,
+    lines: quoteLines,
+    tempItemId, setTempItemId,
+    tempQty, setTempQty,
+    tempPrice, setTempPrice,
+    discount, setDiscount,
+    notes, setNotes,
+    totals,
+    handleTempProductChange,
+    handleAddLine,
+    removeLine,
+    handleSaveQuote: hookSaveQuote,
+  } = useQuoteForm(quotes, items, customers, onAddQuote, onUpdateQuoteStatus, onConvertQuoteToInvoice);
 
-  // Handle product dropdown changes to prefill selling price
-  const handleTempProductChange = (itemId: string) => {
-    setTempItemId(itemId);
-    const itemObj = items.find(i => i.id === itemId);
-    if (itemObj) {
-      setTempPrice(itemObj.sellingPrice);
-    }
-  };
-
-  // Add line to creation list
-  const handleAddLine = () => {
-    if (!tempItemId) return;
-    const itemObj = items.find(i => i.id === tempItemId);
-    if (!itemObj) return;
-
-    // Check if item already exists in lines
-    const existingIdx = quoteLines.findIndex(l => l.itemId === tempItemId);
-    if (existingIdx > -1) {
-      const updatedLines = [...quoteLines];
-      updatedLines[existingIdx].quantity += tempQty;
-      updatedLines[existingIdx].total = updatedLines[existingIdx].quantity * updatedLines[existingIdx].price;
-      setQuoteLines(updatedLines);
-    } else {
-      setQuoteLines([...quoteLines, {
-        itemId: tempItemId,
-        itemName: itemObj.name,
-        unit: itemObj.unit,
-        quantity: tempQty,
-        price: tempPrice || itemObj.sellingPrice,
-        total: tempQty * (tempPrice || itemObj.sellingPrice)
-      }]);
-    }
-
-    // Reset line fields
-    setTempItemId('');
-    setTempQty(1);
-    setTempPrice(0);
-  };
-
-  const removeLine = (idx: number) => {
-    setQuoteLines(quoteLines.filter((_, i) => i !== idx));
-  };
-
-  // Compute live quote totals
-  const totals = useMemo(() => {
-    const subtotal = quoteLines.reduce((acc, line) => acc + line.total, 0);
-    const taxedAmount = Math.max(0, subtotal - discount);
-    const tax = Math.round(taxedAmount * 0.18); // 18% standard VAT in Senegal
-    const total = taxedAmount + tax;
-    return { subtotal, tax, total };
-  }, [quoteLines, discount]);
-
-  // Save new Quote
   const handleSaveQuote = (status: Quote['status']) => {
-    if (!customerId) {
-      alert("Veuillez sélectionner un client.");
-      return;
+    if (hookSaveQuote(status)) {
+      setIsCreateOpen(false);
     }
-    if (quoteLines.length === 0) {
-      alert("Veuillez ajouter au moins un article.");
-      return;
-    }
-
-    const customerObj = customers.find(c => c.id === customerId);
-    if (!customerObj) return;
-
-    onAddQuote({
-      date: quoteDate,
-      expiryDate: quoteExpiry,
-      customerId: customerObj.id,
-      customerName: customerObj.name,
-      items: quoteLines,
-      subtotal: totals.subtotal,
-      discount: discount,
-      tax: totals.tax,
-      total: totals.total,
-      status,
-      notes
-    });
-
-    // Reset Form
-    setIsCreateOpen(false);
-    setCustomerId('');
-    setQuoteLines([]);
-    setDiscount(0);
-    setNotes('');
   };
 
   // Trigger conversion
@@ -408,8 +318,8 @@ export default function DevisView({
                     <label className="block text-slate-600 font-bold mb-1">Date d'Expiration</label>
                     <input
                       type="date"
-                      value={quoteExpiry}
-                      onChange={(e) => setQuoteExpiry(e.target.value)}
+                      value={expiryDate}
+                      onChange={(e) => setExpiryDate(e.target.value)}
                       className="w-full border border-slate-200 p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
                     />
                   </div>

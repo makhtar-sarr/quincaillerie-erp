@@ -16,8 +16,9 @@ import {
   AlertTriangle,
   QrCode
 } from 'lucide-react';
-import { Invoice, Item, Customer, LineItem } from '../types';
+import { Invoice, Item, Customer } from '../types';
 import { formatFCFA } from '../utils/data';
+import { useInvoiceForm } from '../hooks/useInvoiceForm';
 
 interface InvoicesViewProps {
   invoices: Invoice[];
@@ -42,20 +43,32 @@ export default function InvoicesView({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<Invoice | null>(null);
 
-  // Form states
-  const [customerId, setCustomerId] = useState('');
-  const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [invoiceLines, setInvoiceLines] = useState<LineItem[]>([]);
-  const [discount, setDiscount] = useState<number>(0);
-  const [paymentMethod, setPaymentMethod] = useState<Invoice['paymentMethod']>('Espèces');
-  const [amountPaid, setAmountPaid] = useState<number>(0);
-  const [operator, setOperator] = useState('Abdou');
-  const [notes, setNotes] = useState('');
+  // Invoice form logic via hook
+  const {
+    customerId, setCustomerId,
+    invoiceDate, setInvoiceDate,
+    paymentMethod, setPaymentMethod,
+    amountPaid, setAmountPaid,
+    lines: invoiceLines,
+    discount, setDiscount,
+    operator, setOperator,
+    notes, setNotes,
+    tempItemId, setTempItemId,
+    tempQty, setTempQty,
+    tempPrice, setTempPrice,
+    totals,
+    handleTempProductChange,
+    handleAddLine,
+    removeLine,
+    handleSaveInvoice: hookSaveInvoice,
+  } = useInvoiceForm(items, customers, onAddInvoice);
 
-  // Line item picker temp states
-  const [tempItemId, setTempItemId] = useState('');
-  const [tempQty, setTempQty] = useState(1);
-  const [tempPrice, setTempPrice] = useState(0);
+  const handleSaveInvoice = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (hookSaveInvoice()) {
+      setIsCreateOpen(false);
+    }
+  };
 
   // Filter invoices list
   const filteredInvoices = useMemo(() => {
@@ -67,118 +80,6 @@ export default function InvoicesView({
       return matchSearch && matchMethod && matchStatus;
     }).sort((a, b) => b.number.localeCompare(a.number));
   }, [invoices, search, methodFilter, statusFilter]);
-
-  // Handle product dropdown changes to prefill selling price
-  const handleTempProductChange = (itemId: string) => {
-    setTempItemId(itemId);
-    const itemObj = items.find(i => i.id === itemId);
-    if (itemObj) {
-      setTempPrice(itemObj.sellingPrice);
-    }
-  };
-
-  // Add line to creation list
-  const handleAddLine = () => {
-    if (!tempItemId) return;
-    const itemObj = items.find(i => i.id === tempItemId);
-    if (!itemObj) return;
-
-    if (tempQty > itemObj.stockCount) {
-      alert(`Stock insuffisant ! Stock disponible : ${itemObj.stockCount} ${itemObj.unit}s.`);
-      return;
-    }
-
-    // Check if item already exists in lines
-    const existingIdx = invoiceLines.findIndex(l => l.itemId === tempItemId);
-    if (existingIdx > -1) {
-      const updatedLines = [...invoiceLines];
-      const newQty = updatedLines[existingIdx].quantity + tempQty;
-      if (newQty > itemObj.stockCount) {
-        alert(`Stock insuffisant en cumulant ! Stock disponible : ${itemObj.stockCount} ${itemObj.unit}s.`);
-        return;
-      }
-      updatedLines[existingIdx].quantity = newQty;
-      updatedLines[existingIdx].total = updatedLines[existingIdx].quantity * updatedLines[existingIdx].price;
-      setInvoiceLines(updatedLines);
-    } else {
-      setInvoiceLines([...invoiceLines, {
-        itemId: tempItemId,
-        itemName: itemObj.name,
-        unit: itemObj.unit,
-        quantity: tempQty,
-        price: tempPrice || itemObj.sellingPrice,
-        total: tempQty * (tempPrice || itemObj.sellingPrice)
-      }]);
-    }
-
-    // Reset line fields
-    setTempItemId('');
-    setTempQty(1);
-    setTempPrice(0);
-  };
-
-  const removeLine = (idx: number) => {
-    setInvoiceLines(invoiceLines.filter((_, i) => i !== idx));
-  };
-
-  // Compute live invoice totals
-  const totals = useMemo(() => {
-    const subtotal = invoiceLines.reduce((acc, line) => acc + line.total, 0);
-    const taxedAmount = Math.max(0, subtotal - discount);
-    const tax = Math.round(taxedAmount * 0.18); // 18% standard VAT in Senegal
-    const total = taxedAmount + tax;
-    return { subtotal, tax, total };
-  }, [invoiceLines, discount]);
-
-  // Automatically update amount paid to match total when total changes
-  // to save time for cashiers, but still allow overriding
-  React.useEffect(() => {
-    setAmountPaid(totals.total);
-  }, [totals.total]);
-
-  const handleSaveInvoice = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customerId) {
-      alert("Veuillez choisir un client.");
-      return;
-    }
-    if (invoiceLines.length === 0) {
-      alert("Veuillez ajouter des articles avant de valider la vente.");
-      return;
-    }
-
-    const customerObj = customers.find(c => c.id === customerId);
-    if (!customerObj) return;
-
-    let invoiceStatus: Invoice['status'] = 'Payé';
-    if (amountPaid === 0) {
-      invoiceStatus = 'Non Payé';
-    } else if (amountPaid < totals.total) {
-      invoiceStatus = 'Partiel';
-    }
-
-    onAddInvoice({
-      date: invoiceDate,
-      customerId: customerObj.id,
-      customerName: customerObj.name,
-      items: invoiceLines,
-      subtotal: totals.subtotal,
-      discount: discount,
-      tax: totals.tax,
-      total: totals.total,
-      amountPaid: amountPaid,
-      paymentMethod,
-      status: invoiceStatus,
-      notes
-    }, operator);
-
-    // Reset Form
-    setIsCreateOpen(false);
-    setCustomerId('');
-    setInvoiceLines([]);
-    setDiscount(0);
-    setNotes('');
-  };
 
   const printInvoice = () => {
     window.print();

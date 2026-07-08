@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Settings, 
@@ -23,14 +23,9 @@ import {
   Info
 } from 'lucide-react';
 import { StoreSettings, Item, StockMovement, Customer, Supplier, Quote, Invoice } from '../types';
-import { 
-  isFirebaseAvailable, 
-  saveBackupToCloud, 
-  getBackupsFromCloud, 
-  deleteBackupFromCloud, 
-  CloudBackup 
-} from '../lib/firebase';
+import { isFirebaseAvailable } from '../lib/firebase';
 import { formatFCFA } from '../utils/data';
+import { useCloudBackups } from '../hooks/useCloudBackups';
 
 interface SettingsViewProps {
   settings: StoreSettings;
@@ -73,32 +68,6 @@ export default function SettingsView({
   const [tvaRate, setTvaRate] = useState(settings.tvaRate);
   const [saved, setSaved] = useState(false);
 
-  // Cloud backup state
-  const [backups, setBackups] = useState<CloudBackup[]>([]);
-  const [isFetching, setIsFetching] = useState(false);
-  const [isBackingUp, setIsBackingUp] = useState(false);
-  const [backupLabel, setBackupLabel] = useState('');
-  const [backupOperator, setBackupOperator] = useState('Abdou');
-  const [cloudStatusMsg, setCloudStatusMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-
-  // Load backups list
-  const loadBackupsList = async () => {
-    if (!isFirebaseAvailable) return;
-    setIsFetching(true);
-    try {
-      const list = await getBackupsFromCloud();
-      setBackups(list);
-    } catch (err) {
-      console.error("Failed to load backups:", err);
-    } finally {
-      setIsFetching(false);
-    }
-  };
-
-  useEffect(() => {
-    loadBackupsList();
-  }, []);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onUpdateSettings({
@@ -115,111 +84,15 @@ export default function SettingsView({
     setTimeout(() => setSaved(false), 3000);
   };
 
-  // Perform a manual Cloud backup snapshot
-  const handleCreateBackup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isFirebaseAvailable) {
-      setCloudStatusMsg({ type: 'error', text: "Le service Cloud n'est pas disponible." });
-      return;
-    }
-    if (!backupLabel.trim()) {
-      alert("Veuillez donner une description à votre sauvegarde.");
-      return;
-    }
-
-    setIsBackingUp(true);
-    setCloudStatusMsg(null);
-
-    try {
-      const dataPackage = {
-        settings,
-        items,
-        movements,
-        customers,
-        suppliers,
-        quotes,
-        invoices
-      };
-
-      const backupId = await saveBackupToCloud(backupLabel, backupOperator, dataPackage);
-      setCloudStatusMsg({ 
-        type: 'success', 
-        text: `Sauvegarde Cloud "${backupLabel}" créée avec succès (ID: ${backupId.slice(0, 8)}...)` 
-      });
-      setBackupLabel('');
-      // Reload backups list
-      await loadBackupsList();
-    } catch (err: any) {
-      console.error(err);
-      setCloudStatusMsg({ type: 'error', text: err.message || "Erreur lors de la sauvegarde." });
-    } finally {
-      setIsBackingUp(false);
-    }
-  };
-
-  // Restore a specific cloud snapshot
-  const handleRestoreBackup = (backup: CloudBackup) => {
-    const confirmation = window.confirm(
-      `ATTENTION: Vous êtes sur le point de restaurer la sauvegarde "${backup.label}" du ${new Date(backup.createdAt).toLocaleString('fr-FR')}.\n\nCela va ÉCRASER toutes vos données locales actuelles (stocks, clients, factures, devis, etc.). Cette opération est irréversible.\n\nVoulez-vous continuer ?`
-    );
-
-    if (!confirmation) return;
-
-    try {
-      // Unpack the data package safely
-      const unpacked = backup.data;
-      if (!unpacked) {
-        alert("La sauvegarde semble vide ou corrompue.");
-        return;
-      }
-
-      onRestoreAllData({
-        settings: unpacked.settings || settings,
-        items: unpacked.items || [],
-        movements: unpacked.movements || [],
-        customers: unpacked.customers || [],
-        suppliers: unpacked.suppliers || [],
-        quotes: unpacked.quotes || [],
-        invoices: unpacked.invoices || []
-      });
-
-      setCloudStatusMsg({
-        type: 'success',
-        text: `Restauration effectuée avec succès ! Les données du ${new Date(backup.createdAt).toLocaleDateString('fr-FR')} sont restaurées.`
-      });
-      
-      // Update local states for the inputs to match restored settings
-      if (unpacked.settings) {
-        setStoreName(unpacked.settings.storeName);
-        setAddress(unpacked.settings.address);
-        setPhone(unpacked.settings.phone);
-        setEmail(unpacked.settings.email);
-        setNinea(unpacked.settings.ninea);
-        setRc(unpacked.settings.rc);
-        setTvaRate(unpacked.settings.tvaRate);
-      }
-
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err: any) {
-      console.error(err);
-      alert("Erreur critique lors du chargement des données restaurées.");
-    }
-  };
-
-  // Delete backup from cloud list
-  const handleDeleteBackup = async (id: string, label: string) => {
-    const confirmation = window.confirm(`Supprimer définitivement la sauvegarde "${label}" du Cloud ?`);
-    if (!confirmation) return;
-
-    try {
-      await deleteBackupFromCloud(id);
-      setCloudStatusMsg({ type: 'success', text: "Sauvegarde supprimée du Cloud." });
-      await loadBackupsList();
-    } catch (err: any) {
-      console.error(err);
-      setCloudStatusMsg({ type: 'error', text: err.message || "Impossible de supprimer la sauvegarde." });
-    }
-  };
+  const { backups, isBackingUp, isFetching, cloudStatusMsg, backupLabel, backupOperator, setBackupLabel, setBackupOperator, handleCreateBackup, handleRestoreBackup, handleDeleteBackup, loadBackupsList } = useCloudBackups({
+    settings,
+    items,
+    movements,
+    customers,
+    suppliers,
+    quotes,
+    invoices
+  }, onRestoreAllData);
 
   return (
     <div id="settings-view-root" className="max-w-4xl mx-auto space-y-8 pb-12">

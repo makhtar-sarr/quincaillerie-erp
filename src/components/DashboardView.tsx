@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
 import { 
   TrendingUp, 
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Item, Invoice, Quote, Customer, StockMovement } from '../types';
 import { formatFCFA } from '../utils/data';
+import { useDashboardMetrics } from '../hooks/useDashboardMetrics';
 
 interface DashboardViewProps {
   items: Item[];
@@ -34,69 +35,7 @@ export default function DashboardView({
   onNavigate,
   onQuickRestock
 }: DashboardViewProps) {
-  // Calculations
-  const metrics = useMemo(() => {
-    const totalSales = invoices.reduce((acc, inv) => acc + inv.total, 0);
-    
-    // Sales today (mocking today as 2026-07-06 based on current system date)
-    const todayStr = "2026-07-06";
-    const salesToday = invoices
-      .filter(inv => inv.date === todayStr)
-      .reduce((acc, inv) => acc + inv.total, 0);
-
-    const stockValueCost = items.reduce((acc, item) => acc + (item.stockCount * item.buyingPrice), 0);
-    const stockValueRetail = items.reduce((acc, item) => acc + (item.stockCount * item.sellingPrice), 0);
-    
-    const clientDebts = customers.reduce((acc, cust) => acc + cust.outstandingBalance, 0);
-    const lowStockItems = items.filter(item => item.stockCount <= item.minStock);
-
-    return {
-      totalSales,
-      salesToday,
-      stockValueCost,
-      stockValueRetail,
-      clientDebts,
-      lowStockCount: lowStockItems.length,
-      lowStockItems
-    };
-  }, [items, invoices, customers]);
-
-  // Sales by Category
-  const salesByCategory = useMemo(() => {
-    const categories: Record<string, number> = {};
-    invoices.forEach(inv => {
-      inv.items.forEach(line => {
-        const itemObj = items.find(i => i.id === line.itemId);
-        const cat = itemObj ? itemObj.category : 'Divers';
-        categories[cat] = (categories[cat] || 0) + line.total;
-      });
-    });
-
-    const total = Object.values(categories).reduce((a, b) => a + b, 0) || 1;
-    return Object.entries(categories).map(([name, value]) => ({
-      name,
-      value,
-      percentage: Math.round((value / total) * 100),
-      color: 
-        name === 'Ciment & Matériaux' ? '#B91C1C' : // red-700
-        name === 'Fer & Métaux' ? '#4338CA' : // indigo-700
-        name === 'Peinture & Finition' ? '#047857' : // emerald-700
-        name === 'Plomberie & Sanitaire' ? '#0369A1' : // sky-700
-        name === 'Électricité & Éclairage' ? '#D97706' : // amber-600
-        name === 'Outillage & Sécurité' ? '#6B7280' : // gray-500
-        '#8B5CF6' // purple-500
-    })).sort((a, b) => b.value - a.value);
-  }, [invoices, items]);
-
-  // Recent 5 sales
-  const recentSales = useMemo(() => {
-    return [...invoices].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-  }, [invoices]);
-
-  // Recent 5 stock movements
-  const recentMovements = useMemo(() => {
-    return [...movements].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-  }, [movements]);
+  const { metrics, salesByCategory, recentSales, recentMovements } = useDashboardMetrics(items, invoices, customers, movements);
 
   return (
     <div id="dashboard-view-container" className="space-y-6">
