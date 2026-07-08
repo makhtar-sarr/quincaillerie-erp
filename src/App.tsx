@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, 
@@ -18,12 +18,6 @@ import {
 import { Item, StockMovement, Customer, Supplier, Quote, Invoice, StoreSettings } from './types';
 import { 
   DEFAULT_SETTINGS, 
-  INITIAL_ITEMS, 
-  INITIAL_CUSTOMERS, 
-  INITIAL_SUPPLIERS, 
-  INITIAL_QUOTES, 
-  INITIAL_INVOICES, 
-  INITIAL_STOCK_MOVEMENTS,
   formatFCFA 
 } from './utils/data';
 
@@ -35,90 +29,45 @@ import InvoicesView from './components/InvoicesView';
 import ContactsView from './components/ContactsView';
 import SettingsView from './components/SettingsView';
 
+// Store
+import { StoreProvider, useStore } from './context/StoreContext';
+import { useIdGenerator } from './hooks/useIdGenerator';
+
 export default function App() {
-  // Navigation
+  return (
+    <StoreProvider>
+      <AppContent />
+    </StoreProvider>
+  );
+}
+
+function AppContent() {
+  // Navigation (UI state - keep as local useState)
   const [currentView, setCurrentView] = useState<string>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Core Persistent States
-  const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
-  const [items, setItems] = useState<Item[]>([]);
-  const [movements, setMovements] = useState<StockMovement[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  // Store state and dispatch
+  const [state, dispatch] = useStore();
+  const { settings, items, movements, customers, suppliers, quotes, invoices } = state;
 
-  // 1. Load initial states from LocalStorage or seed data
-  useEffect(() => {
-    const savedSettings = localStorage.getItem('erp_settings');
-    const savedItems = localStorage.getItem('erp_items');
-    const savedMovements = localStorage.getItem('erp_movements');
-    const savedCustomers = localStorage.getItem('erp_customers');
-    const savedSuppliers = localStorage.getItem('erp_suppliers');
-    const savedQuotes = localStorage.getItem('erp_quotes');
-    const savedInvoices = localStorage.getItem('erp_invoices');
-
-    if (savedSettings) setSettings(JSON.parse(savedSettings));
-    setItems(savedItems ? JSON.parse(savedItems) : INITIAL_ITEMS);
-    setMovements(savedMovements ? JSON.parse(savedMovements) : INITIAL_STOCK_MOVEMENTS);
-    setCustomers(savedCustomers ? JSON.parse(savedCustomers) : INITIAL_CUSTOMERS);
-    setSuppliers(savedSuppliers ? JSON.parse(savedSuppliers) : INITIAL_SUPPLIERS);
-    setQuotes(savedQuotes ? JSON.parse(savedQuotes) : INITIAL_QUOTES);
-    setInvoices(savedInvoices ? JSON.parse(savedInvoices) : INITIAL_INVOICES);
-  }, []);
-
-  // 2. Synchronize states with LocalStorage
-  const syncAndSetItems = (newItems: Item[]) => {
-    setItems(newItems);
-    localStorage.setItem('erp_items', JSON.stringify(newItems));
-  };
-
-  const syncAndSetMovements = (newMovements: StockMovement[]) => {
-    setMovements(newMovements);
-    localStorage.setItem('erp_movements', JSON.stringify(newMovements));
-  };
-
-  const syncAndSetCustomers = (newCustomers: Customer[]) => {
-    setCustomers(newCustomers);
-    localStorage.setItem('erp_customers', JSON.stringify(newCustomers));
-  };
-
-  const syncAndSetSuppliers = (newSuppliers: Supplier[]) => {
-    setSuppliers(newSuppliers);
-    localStorage.setItem('erp_suppliers', JSON.stringify(newSuppliers));
-  };
-
-  const syncAndSetQuotes = (newQuotes: Quote[]) => {
-    setQuotes(newQuotes);
-    localStorage.setItem('erp_quotes', JSON.stringify(newQuotes));
-  };
-
-  const syncAndSetInvoices = (newInvoices: Invoice[]) => {
-    setInvoices(newInvoices);
-    localStorage.setItem('erp_invoices', JSON.stringify(newInvoices));
-  };
-
-  const syncAndSetSettings = (newSettings: StoreSettings) => {
-    setSettings(newSettings);
-    localStorage.setItem('erp_settings', JSON.stringify(newSettings));
-  };
+  // ID generation
+  const generateId = useIdGenerator();
 
   // CALLBACKS: CATALOGUE & STOCK
   const handleAddItem = (itemData: Omit<Item, 'id' | 'stockCount'>, initialQty: number, operator: string) => {
-    const newId = `prod-${Date.now()}`;
+    const newId = generateId('prod');
     const newItem: Item = {
       ...itemData,
       id: newId,
       stockCount: initialQty
     };
 
-    syncAndSetItems([...items, newItem]);
+    dispatch({ type: 'SET_ITEMS', payload: [...items, newItem] });
 
     if (initialQty > 0) {
       // Create initial stock movement
       const newMovement: StockMovement = {
-        id: `mov-${Date.now()}`,
+        id: generateId('mov'),
         itemId: newId,
         itemName: newItem.name,
         type: 'ENTREE',
@@ -128,18 +77,18 @@ export default function App() {
         referenceCode: 'INIT-INVENTAIRE',
         operator
       };
-      syncAndSetMovements([newMovement, ...movements]);
+      dispatch({ type: 'SET_MOVEMENTS', payload: [newMovement, ...movements] });
     }
   };
 
   const handleUpdateItem = (updatedItem: Item) => {
-    syncAndSetItems(items.map(i => i.id === updatedItem.id ? updatedItem : i));
+    dispatch({ type: 'SET_ITEMS', payload: items.map(i => i.id === updatedItem.id ? updatedItem : i) });
   };
 
   const handleDeleteItem = (id: string) => {
-    syncAndSetItems(items.filter(i => i.id !== id));
+    dispatch({ type: 'SET_ITEMS', payload: items.filter(i => i.id !== id) });
     // clean related movements
-    syncAndSetMovements(movements.filter(m => m.itemId !== id));
+    dispatch({ type: 'SET_MOVEMENTS', payload: movements.filter(m => m.itemId !== id) });
   };
 
   const handleAdjustStock = (
@@ -156,11 +105,11 @@ export default function App() {
     const newStockCount = type === 'ENTREE' ? itemObj.stockCount + qty : Math.max(0, itemObj.stockCount - qty);
     
     // Update item stock count
-    syncAndSetItems(items.map(i => i.id === itemId ? { ...i, stockCount: newStockCount } : i));
+    dispatch({ type: 'SET_ITEMS', payload: items.map(i => i.id === itemId ? { ...i, stockCount: newStockCount } : i) });
 
     // Log movement
     const newMovement: StockMovement = {
-      id: `mov-${Date.now()}`,
+      id: generateId('mov'),
       itemId,
       itemName: itemObj.name,
       type,
@@ -170,7 +119,7 @@ export default function App() {
       referenceCode: ref || "AJUST-MANUEL",
       operator
     };
-    syncAndSetMovements([newMovement, ...movements]);
+    dispatch({ type: 'SET_MOVEMENTS', payload: [newMovement, ...movements] });
   };
 
   // Quick action from dashboard to restock low stock item
@@ -183,18 +132,18 @@ export default function App() {
     const nextNumber = `DEV-2026-${String(quotes.length + 1).padStart(3, '0')}`;
     const newQuote: Quote = {
       ...quoteData,
-      id: `q-${Date.now()}`,
+      id: generateId('q'),
       number: nextNumber
     };
-    syncAndSetQuotes([newQuote, ...quotes]);
+    dispatch({ type: 'SET_QUOTES', payload: [newQuote, ...quotes] });
   };
 
   const handleUpdateQuoteStatus = (id: string, status: Quote['status']) => {
-    syncAndSetQuotes(quotes.map(q => q.id === id ? { ...q, status } : q));
+    dispatch({ type: 'SET_QUOTES', payload: quotes.map(q => q.id === id ? { ...q, status } : q) });
   };
 
   const handleDeleteQuote = (id: string) => {
-    syncAndSetQuotes(quotes.filter(q => q.id !== id));
+    dispatch({ type: 'SET_QUOTES', payload: quotes.filter(q => q.id !== id) });
   };
 
   // CALLBACKS: INVOICES & SALES
@@ -202,12 +151,12 @@ export default function App() {
     const nextNumber = `FAC-2026-${String(invoices.length + 1).padStart(3, '0')}`;
     const newInvoice: Invoice = {
       ...invoiceData,
-      id: `fac-${Date.now()}`,
+      id: generateId('fac'),
       number: nextNumber
     };
 
     // 1. Add the invoice
-    syncAndSetInvoices([newInvoice, ...invoices]);
+    dispatch({ type: 'SET_INVOICES', payload: [newInvoice, ...invoices] });
 
     // 2. Reduce products stock count automatically
     const updatedItems = items.map(item => {
@@ -220,11 +169,11 @@ export default function App() {
       }
       return item;
     });
-    syncAndSetItems(updatedItems);
+    dispatch({ type: 'SET_ITEMS', payload: updatedItems });
 
     // 3. Log stock movements
     const newMovements: StockMovement[] = invoiceData.items.map((line, idx) => ({
-      id: `mov-${Date.now()}-${idx}`,
+      id: `${generateId('mov')}-${idx}`,
       itemId: line.itemId,
       itemName: line.itemName,
       type: 'SORTIE',
@@ -234,7 +183,7 @@ export default function App() {
       referenceCode: nextNumber,
       operator
     }));
-    syncAndSetMovements([...newMovements, ...movements]);
+    dispatch({ type: 'SET_MOVEMENTS', payload: [...newMovements, ...movements] });
 
     // 4. Update customer outstanding balance if partial payment
     const unpaidAmount = invoiceData.total - invoiceData.amountPaid;
@@ -248,7 +197,7 @@ export default function App() {
         }
         return c;
       });
-      syncAndSetCustomers(updatedCustomers);
+      dispatch({ type: 'SET_CUSTOMERS', payload: updatedCustomers });
     }
   };
 
@@ -257,7 +206,7 @@ export default function App() {
     if (!invoiceObj) return;
 
     // 1. Delete invoice
-    syncAndSetInvoices(invoices.filter(inv => inv.id !== id));
+    dispatch({ type: 'SET_INVOICES', payload: invoices.filter(inv => inv.id !== id) });
 
     // 2. RESTORE stocks
     const restoredItems = items.map(item => {
@@ -270,10 +219,10 @@ export default function App() {
       }
       return item;
     });
-    syncAndSetItems(restoredItems);
+    dispatch({ type: 'SET_ITEMS', payload: restoredItems });
 
     // 3. Remove stock movements
-    syncAndSetMovements(movements.filter(m => m.referenceCode !== invoiceObj.number));
+    dispatch({ type: 'SET_MOVEMENTS', payload: movements.filter(m => m.referenceCode !== invoiceObj.number) });
 
     // 4. Restore customer balance if it was credit
     const unpaid = invoiceObj.total - invoiceObj.amountPaid;
@@ -287,7 +236,7 @@ export default function App() {
         }
         return c;
       });
-      syncAndSetCustomers(restoredCustomers);
+      dispatch({ type: 'SET_CUSTOMERS', payload: restoredCustomers });
     }
   };
 
@@ -323,18 +272,18 @@ export default function App() {
   const handleAddCustomer = (cData: Omit<Customer, 'id' | 'outstandingBalance'>) => {
     const newCustomer: Customer = {
       ...cData,
-      id: `cust-${Date.now()}`,
+      id: generateId('cust'),
       outstandingBalance: 0
     };
-    syncAndSetCustomers([...customers, newCustomer]);
+    dispatch({ type: 'SET_CUSTOMERS', payload: [...customers, newCustomer] });
   };
 
   const handleUpdateCustomer = (cUpdated: Customer) => {
-    syncAndSetCustomers(customers.map(c => c.id === cUpdated.id ? cUpdated : c));
+    dispatch({ type: 'SET_CUSTOMERS', payload: customers.map(c => c.id === cUpdated.id ? cUpdated : c) });
   };
 
   const handleDeleteCustomer = (id: string) => {
-    syncAndSetCustomers(customers.filter(c => c.id !== id));
+    dispatch({ type: 'SET_CUSTOMERS', payload: customers.filter(c => c.id !== id) });
   };
 
   // Let customer pay outstanding credit debt
@@ -348,7 +297,7 @@ export default function App() {
       }
       return c;
     });
-    syncAndSetCustomers(updatedCustomers);
+    dispatch({ type: 'SET_CUSTOMERS', payload: updatedCustomers });
 
     // Log as a special cashier invoice with no items just to track cash receipt
     const customerObj = customers.find(c => c.id === customerId);
@@ -356,7 +305,7 @@ export default function App() {
 
     const nextNumber = `REC-${Date.now().toString().slice(-6)}`;
     const newReceiptInvoice: Invoice = {
-      id: `fac-${Date.now()}`,
+      id: generateId('fac'),
       number: nextNumber,
       date: new Date().toISOString().split('T')[0],
       customerId,
@@ -371,30 +320,30 @@ export default function App() {
       status: 'Payé',
       notes: `Recouvrement de créance client (Paiement crédit)`
     };
-    syncAndSetInvoices([newReceiptInvoice, ...invoices]);
+    dispatch({ type: 'SET_INVOICES', payload: [newReceiptInvoice, ...invoices] });
   };
 
   // SUPPLIERS CALLBACKS
   const handleAddSupplier = (sData: Omit<Supplier, 'id' | 'balance'>) => {
     const newSupplier: Supplier = {
       ...sData,
-      id: `supp-${Date.now()}`,
+      id: generateId('supp'),
       balance: 0
     };
-    syncAndSetSuppliers([...suppliers, newSupplier]);
+    dispatch({ type: 'SET_SUPPLIERS', payload: [...suppliers, newSupplier] });
   };
 
   const handleUpdateSupplier = (sUpdated: Supplier) => {
-    syncAndSetSuppliers(suppliers.map(s => s.id === sUpdated.id ? sUpdated : s));
+    dispatch({ type: 'SET_SUPPLIERS', payload: suppliers.map(s => s.id === sUpdated.id ? sUpdated : s) });
   };
 
   const handleDeleteSupplier = (id: string) => {
-    syncAndSetSuppliers(suppliers.filter(s => s.id !== id));
+    dispatch({ type: 'SET_SUPPLIERS', payload: suppliers.filter(s => s.id !== id) });
   };
 
   // CALLBACKS: SETTINGS
   const handleUpdateSettings = (newSettings: StoreSettings) => {
-    syncAndSetSettings(newSettings);
+    dispatch({ type: 'SET_SETTINGS', payload: newSettings });
   };
 
   const handleRestoreAllData = (restoredData: {
@@ -406,13 +355,7 @@ export default function App() {
     quotes: Quote[];
     invoices: Invoice[];
   }) => {
-    syncAndSetSettings(restoredData.settings);
-    syncAndSetItems(restoredData.items);
-    syncAndSetMovements(restoredData.movements);
-    syncAndSetCustomers(restoredData.customers);
-    syncAndSetSuppliers(restoredData.suppliers);
-    syncAndSetQuotes(restoredData.quotes);
-    syncAndSetInvoices(restoredData.invoices);
+    dispatch({ type: 'RESTORE_ALL_DATA', payload: restoredData });
   };
 
   // Render correct panel
