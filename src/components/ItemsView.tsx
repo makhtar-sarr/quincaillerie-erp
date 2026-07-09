@@ -16,6 +16,7 @@ import { formatFCFA } from '../utils/data';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { Table, type Column } from '@/components/ui/Table';
 import { cn } from '@/lib/utils';
 
 interface ItemsViewProps {
@@ -103,6 +104,28 @@ export default function ItemsView({
       return matchItemName;
     }).sort((a, b) => b.date.localeCompare(a.date));
   }, [movements, historySearch]);
+
+  const catalogColumns = useMemo<Column[]>(() => [
+    { key: 'ref', label: 'Code / Réf', className: 'py-3.5 px-5 text-xs' },
+    { key: 'name', label: "Nom de l'article", className: 'py-3.5 px-5 text-xs' },
+    { key: 'category', label: 'Catégorie', className: 'py-3.5 px-5 text-xs' },
+    { key: 'buyingPrice', label: 'P. Achat', className: 'py-3.5 px-5 text-xs text-right' },
+    { key: 'sellingPrice', label: 'P. Vente', className: 'py-3.5 px-5 text-xs text-right' },
+    { key: 'unit', label: 'Unité', className: 'py-3.5 px-5 text-xs text-center' },
+    { key: 'stock', label: 'Stock Actuel', className: 'py-3.5 px-5 text-xs text-center' },
+    { key: 'adjustments', label: 'Ajustements', className: 'py-3.5 px-5 text-xs text-center' },
+    { key: 'actions', label: 'Actions', className: 'py-3.5 px-5 text-xs text-right' },
+  ], []);
+
+  const historyColumns = useMemo<Column[]>(() => [
+    { key: 'date', label: 'Date', className: 'text-xs' },
+    { key: 'itemName', label: 'Article', className: 'text-xs' },
+    { key: 'type', label: 'Type', className: 'text-xs text-center' },
+    { key: 'quantity', label: 'Quantité', className: 'text-xs text-center' },
+    { key: 'reason', label: 'Raison', className: 'text-xs' },
+    { key: 'referenceCode', label: 'Document Réf', className: 'text-xs' },
+    { key: 'operator', label: 'Opérateur', className: 'text-xs text-right' },
+  ], []);
 
   const handleOpenAdjust = (item: Item, type: 'ENTREE' | 'SORTIE') => {
     setSelectedItem(item);
@@ -304,114 +327,99 @@ export default function ItemsView({
 
           {/* Catalog Grid/Table - Desktop */}
           <div className="hidden md:block bg-surface rounded-3xl border-2 border-border/80 shadow-[0_10px_40px_rgb(0,0,0,0.015)] overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-neutral-50 dark:bg-neutral-800 border-b border-border text-muted font-bold uppercase text-[10px] tracking-wider">
-                    <th className="py-3.5 px-5">Code / Réf</th>
-                    <th className="py-3.5 px-5">Nom de l'article</th>
-                    <th className="py-3.5 px-5">Catégorie</th>
-                    <th className="py-3.5 px-5 text-right">P. Achat</th>
-                    <th className="py-3.5 px-5 text-right">P. Vente</th>
-                    <th className="py-3.5 px-5 text-center">Unité</th>
-                    <th className="py-3.5 px-5 text-center">Stock Actuel</th>
-                    <th className="py-3.5 px-5 text-center">Ajustements</th>
-                    <th className="py-3.5 px-5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {filteredItems.map((item) => {
-                    const isLow = item.stockCount <= item.minStock;
-                    const isOut = item.stockCount <= 0;
-                    const margin = item.sellingPrice - item.buyingPrice;
-                    const marginPercent = Math.round((margin / item.sellingPrice) * 100);
+            <Table
+              columns={[
+                { key: 'ref', label: 'Code / Réf', className: 'py-3.5 px-5' },
+                { key: 'name', label: 'Nom de l\'article', className: 'py-3.5 px-5' },
+                { key: 'category', label: 'Catégorie', className: 'py-3.5 px-5' },
+                { key: 'buyingPrice', label: 'P. Achat', className: 'py-3.5 px-5 text-right' },
+                { key: 'sellingPrice', label: 'P. Vente', className: 'py-3.5 px-5 text-right' },
+                { key: 'unit', label: 'Unité', className: 'py-3.5 px-5 text-center' },
+                { key: 'stock', label: 'Stock Actuel', className: 'py-3.5 px-5 text-center' },
+                { key: 'adjustments', label: 'Ajustements', className: 'py-3.5 px-5 text-center' },
+                { key: 'actions', label: 'Actions', className: 'py-3.5 px-5 text-right' },
+              ]}
+              data={filteredItems.map((item) => {
+                const isLow = item.stockCount <= item.minStock;
+                const isOut = item.stockCount <= 0;
+                const margin = item.sellingPrice - item.buyingPrice;
+                const marginPercent = Math.round((margin / item.sellingPrice) * 100);
 
-                    return (
-                      <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
-                        <td className="py-3.5 px-5 font-mono font-bold text-muted text-[10px]">{item.ref}</td>
-                        <td className="py-3.5 px-5 font-semibold text-foreground">
-                          <div>
-                            <span className="text-foreground font-bold text-xs block">{item.name}</span>
-                            {item.description && <span className="text-[10px] text-muted block truncate max-w-[200px] mt-1 font-normal">{item.description}</span>}
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-5">
-                          <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-neutral-100 dark:bg-neutral-700 text-foreground">
-                            {item.category}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-5 text-right font-mono text-muted font-semibold">{formatFCFA(item.buyingPrice)}</td>
-                        <td className="py-3.5 px-5 text-right">
-                          <div className="font-mono font-bold text-foreground">{formatFCFA(item.sellingPrice)}</div>
-                          <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">Marge: +{marginPercent}%</div>
-                        </td>
-                        <td className="py-3.5 px-5 text-center text-muted font-bold">{item.unit}</td>
-                        <td className="py-3.5 px-5 text-center">
-                          <div className="flex flex-col items-center">
-                            <span className={`px-3 py-1 rounded-full font-black font-mono text-[11px] ${
-                              isOut ? 'bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800' :
-                              isLow ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 animate-pulse' :
-                              'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                            }`}>
-                              {item.stockCount} {item.unit}(s)
-                            </span>
-                            <span className="text-[9px] text-muted mt-1 font-bold">Min: {item.minStock}</span>
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-5 text-center">
-                          <div className="flex justify-center space-x-1.5">
-                            <Button
-                              variant="icon"
-                              onClick={() => handleOpenAdjust(item, 'ENTREE')}
-                              title="Ajouter du Stock (Entrée)"
-                              className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800"
-                            >
-                              <PlusCircle className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="icon"
-                              onClick={() => handleOpenAdjust(item, 'SORTIE')}
-                              title="Diminuer du Stock (Sortie/Perte)"
-                              className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-100 dark:border-rose-800"
-                            >
-                              <MinusCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-5 text-right">
-                          <div className="flex items-center justify-end space-x-1">
-                            <Button
-                              variant="icon"
-                              onClick={() => setEditingItem(item)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="icon"
-                              onClick={() => {
-                                if (confirm(`Êtes-vous sûr de vouloir supprimer l'article ${item.name} ?`)) {
-                                  onDeleteItem(item.id);
-                                }
-                              }}
-                              className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {filteredItems.length === 0 && (
-                    <tr>
-                      <td colSpan={9} className="py-12 text-center text-muted font-mono italic">
-                        Aucun article correspondant à la recherche ou au filtre.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                return {
+                  ref: <span className="font-mono font-bold text-muted text-[10px]">{item.ref}</span>,
+                  name: (
+                    <div>
+                      <span className="text-foreground font-bold text-xs block">{item.name}</span>
+                      {item.description && <span className="text-[10px] text-muted block truncate max-w-[200px] mt-1 font-normal">{item.description}</span>}
+                    </div>
+                  ),
+                  category: (
+                    <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-neutral-100 dark:bg-neutral-700 text-foreground">
+                      {item.category}
+                    </span>
+                  ),
+                  buyingPrice: <span className="font-mono text-muted font-semibold">{formatFCFA(item.buyingPrice)}</span>,
+                  sellingPrice: (
+                    <>
+                      <div className="font-mono font-bold text-foreground">{formatFCFA(item.sellingPrice)}</div>
+                      <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">Marge: +{marginPercent}%</div>
+                    </>
+                  ),
+                  unit: <span className="text-muted font-bold">{item.unit}</span>,
+                  stock: (
+                    <div className="flex flex-col items-center">
+                      <span className={`px-3 py-1 rounded-full font-black font-mono text-[11px] ${
+                        isOut ? 'bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800' :
+                        isLow ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 animate-pulse' :
+                        'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                      }`}>
+                        {item.stockCount} {item.unit}(s)
+                      </span>
+                      <span className="text-[9px] text-muted mt-1 font-bold">Min: {item.minStock}</span>
+                    </div>
+                  ),
+                  adjustments: (
+                    <div className="flex justify-center space-x-1.5">
+                      <Button
+                        variant="icon"
+                        onClick={() => handleOpenAdjust(item, 'ENTREE')}
+                        title="Ajouter du Stock (Entrée)"
+                        className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800"
+                      >
+                        <PlusCircle className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="icon"
+                        onClick={() => handleOpenAdjust(item, 'SORTIE')}
+                        title="Diminuer du Stock (Sortie/Perte)"
+                        className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-100 dark:border-rose-800"
+                      >
+                        <MinusCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ),
+                  actions: (
+                    <div className="flex items-center justify-end space-x-1">
+                      <Button variant="icon" onClick={() => setEditingItem(item)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="icon"
+                        onClick={() => {
+                          if (confirm(`Êtes-vous sûr de vouloir supprimer l'article ${item.name} ?`)) {
+                            onDeleteItem(item.id);
+                          }
+                        }}
+                        className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ),
+                };
+              })}
+              emptyMessage="Aucun article correspondant à la recherche ou au filtre."
+            />
           </div>
 
           {/* Mobile Cards */}
@@ -516,51 +524,40 @@ export default function ItemsView({
             />
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-border">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-neutral-50 dark:bg-neutral-800 border-b border-border text-muted font-bold uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-4">Date</th>
-                  <th className="py-3 px-4">Article</th>
-                  <th className="py-3 px-4 text-center">Type</th>
-                  <th className="py-3 px-4 text-center">Quantité</th>
-                  <th className="py-3 px-4">Raison</th>
-                  <th className="py-3 px-4">Document Réf</th>
-                  <th className="py-3 px-4 text-right">Opérateur</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredMovements.map((mov) => (
-                  <tr key={mov.id} className="hover:bg-neutral-50/50 transition-colors">
-                    <td className="py-3 px-4 font-mono text-muted text-[11px] font-semibold">{mov.date}</td>
-                    <td className="py-3 px-4 font-bold text-foreground">{mov.itemName}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
-                        mov.type === 'ENTREE' ? 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300' : 'bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400'
-                      }`}>
-                        {mov.type}
-                      </span>
-                    </td>
-                    <td className={`py-3 px-4 text-center font-mono font-black text-xs ${
-                      mov.type === 'ENTREE' ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-                    }`}>
-                      {mov.type === 'ENTREE' ? '+' : '-'}{mov.quantity}
-                    </td>
-                    <td className="py-3 px-4 text-foreground font-semibold">{mov.reason}</td>
-                    <td className="py-3 px-4 font-mono text-muted text-[11px] font-bold">{mov.referenceCode}</td>
-                    <td className="py-3 px-4 text-right text-muted font-bold">{mov.operator}</td>
-                  </tr>
-                ))}
-                {filteredMovements.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-muted italic font-mono">
-                      Aucun mouvement de stock enregistré.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <Table
+            className="rounded-2xl border border-border"
+            columns={[
+              { key: 'date', label: 'Date' },
+              { key: 'article', label: 'Article' },
+              { key: 'type', label: 'Type', className: 'text-center' },
+              { key: 'quantity', label: 'Quantité', className: 'text-center' },
+              { key: 'reason', label: 'Raison' },
+              { key: 'reference', label: 'Document Réf' },
+              { key: 'operator', label: 'Opérateur', className: 'text-right' },
+            ]}
+            data={filteredMovements.map((mov) => ({
+              date: <span className="font-mono text-muted text-[11px] font-semibold">{mov.date}</span>,
+              article: <span className="font-bold text-foreground">{mov.itemName}</span>,
+              type: (
+                <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+                  mov.type === 'ENTREE' ? 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300' : 'bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400'
+                }`}>
+                  {mov.type}
+                </span>
+              ),
+              quantity: (
+                <span className={`font-mono font-black text-xs ${
+                  mov.type === 'ENTREE' ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                }`}>
+                  {mov.type === 'ENTREE' ? '+' : '-'}{mov.quantity}
+                </span>
+              ),
+              reason: <span className="text-foreground font-semibold">{mov.reason}</span>,
+              reference: <span className="font-mono text-muted text-[11px] font-bold">{mov.referenceCode}</span>,
+              operator: <span className="text-muted font-bold">{mov.operator}</span>,
+            }))}
+            emptyMessage="Aucun mouvement de stock enregistré."
+          />
         </div>
       )}
 

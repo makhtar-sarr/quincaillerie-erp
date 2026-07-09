@@ -24,6 +24,7 @@ import { Quote, Item, Customer } from '../types';
 import { formatFCFA } from '../utils/data';
 import { useQuoteForm } from '../hooks/useQuoteForm';
 import { Modal } from './ui/Modal';
+import { Table } from './ui/Table';
 import { Button } from './ui/Button';
 
 interface DevisViewProps {
@@ -107,6 +108,129 @@ export default function DevisView({
     window.print();
   };
 
+  // Table column definitions and data
+  const quotesColumns = [
+    { key: 'number', label: 'N° Dévis' },
+    { key: 'date', label: 'Date Émission' },
+    { key: 'customer', label: 'Client' },
+    { key: 'articleCount', label: 'Articles', className: 'text-right' },
+    { key: 'total', label: 'Total Net (FCFA)', className: 'text-right' },
+    { key: 'status', label: 'Statut', className: 'text-center' },
+    { key: 'actions', label: 'Actions', className: 'text-right' },
+  ];
+
+  const quotesData = filteredQuotes.map((q) => {
+    const totalItemsCount = q.items.reduce((sum, item) => sum + item.quantity, 0);
+    return {
+      number: <span className="font-mono font-black text-foreground">{q.number}</span>,
+      date: <span className="text-muted font-bold">{q.date}</span>,
+      customer: (
+        <>
+          <div className="font-bold text-foreground">{q.customerName}</div>
+          <div className="text-[10px] text-muted font-semibold mt-0.5">Valide jusqu'au {q.expiryDate}</div>
+        </>
+      ),
+      articleCount: <span className="text-muted font-mono font-black">{totalItemsCount}</span>,
+      total: <span className="font-mono font-black text-foreground">{formatFCFA(q.total)}</span>,
+      status: (
+        <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+          q.status === 'Accepté' ? 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300' :
+          q.status === 'Envoyé' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-800 dark:text-blue-300' :
+          q.status === 'Brouillon' ? 'bg-neutral-100 dark:bg-neutral-700 text-foreground' :
+          'bg-rose-100 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300'
+        }`}>
+          {q.status}
+        </span>
+      ),
+      actions: (
+        <div className="flex items-center justify-end space-x-2">
+          {q.status === 'Envoyé' && (
+            <Button
+              variant="icon"
+              onClick={() => onUpdateQuoteStatus(q.id, 'Accepté')}
+              title="Marquer comme Accepté"
+              className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+            >
+              <Check className="h-4.5 w-4.5 stroke-[2.5]" />
+            </Button>
+          )}
+          {q.status === 'Accepté' && (
+            <Button
+              variant="success"
+              size="sm"
+              onClick={() => handleOpenConvert(q)}
+              className="font-black text-[9px] uppercase tracking-wider shadow-sm"
+            >
+              <ArrowRight className="h-3 w-3 stroke-[3]" />
+              <span>Facturer</span>
+            </Button>
+          )}
+          <Button
+            variant="icon"
+            onClick={() => setSelectedQuoteForPrint(q)}
+            title="Imprimer / Devis Proforma"
+          >
+            <Printer className="h-4.5 w-4.5 stroke-[2]" />
+          </Button>
+          <Button
+            variant="icon"
+            onClick={() => {
+              if (confirm("Supprimer ce dévis ?")) {
+                onDeleteQuote(q.id);
+              }
+            }}
+            className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+          >
+            <Trash2 className="h-4.5 w-4.5 stroke-[2]" />
+          </Button>
+        </div>
+      ),
+    };
+  });
+
+  const lineItemColumns = [
+    { key: 'itemName', label: 'Désignation' },
+    { key: 'unit', label: 'Unité', className: 'text-center' },
+    { key: 'quantity', label: 'Quantité', className: 'text-center' },
+    { key: 'price', label: 'Prix Unitaire (FCFA)', className: 'text-right' },
+    { key: 'total', label: 'Total HT (FCFA)', className: 'text-right' },
+    { key: 'delete', label: '', className: 'text-right' },
+  ];
+
+  const lineItemData = quoteLines.map((line, idx) => ({
+    itemName: <span className="font-bold text-foreground">{line.itemName}</span>,
+    unit: <span className="text-muted font-semibold">{line.unit}</span>,
+    quantity: <span className="font-mono font-black text-foreground bg-neutral-50/30 px-2 py-0.5 rounded">{line.quantity}</span>,
+    price: <span className="font-mono text-muted font-bold">{formatFCFA(line.price)}</span>,
+    total: <span className="font-mono font-black text-foreground">{formatFCFA(line.total)}</span>,
+    delete: (
+      <Button
+        variant="icon"
+        type="button"
+        onClick={() => removeLine(idx)}
+        className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+      >
+        <Trash2 className="h-4.5 w-4.5" />
+      </Button>
+    ),
+  }));
+
+  const printColumns = [
+    { key: 'itemName', label: 'Réf / Article' },
+    { key: 'unit', label: 'Unité', className: 'text-center' },
+    { key: 'quantity', label: 'Qté', className: 'text-center' },
+    { key: 'price', label: 'P.U. (FCFA)', className: 'text-right' },
+    { key: 'total', label: 'Total (FCFA)', className: 'text-right' },
+  ];
+
+  const printData = selectedQuoteForPrint ? selectedQuoteForPrint.items.map((line) => ({
+    itemName: <span className="font-bold text-foreground">{line.itemName}</span>,
+    unit: <span className="text-muted font-semibold">{line.unit}</span>,
+    quantity: <span className="font-mono font-black text-foreground">{line.quantity}</span>,
+    price: <span className="font-mono font-bold text-muted">{formatFCFA(line.price)}</span>,
+    total: <span className="font-mono font-black text-foreground">{formatFCFA(line.total)}</span>,
+  })) : [];
+
   return (
     <div id="devis-view-root" className="space-y-6">
       {/* Printable Area - Hidden on standard web layout via print styles */}
@@ -174,105 +298,11 @@ export default function DevisView({
 
       {/* Devis List Table - Desktop */}
       <div className="hidden md:block bg-surface rounded-[2rem] border-2 border-border shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-neutral-50 dark:bg-neutral-800 border-b-2 border-border text-muted font-bold uppercase tracking-wider text-[10px]">
-                <th className="py-4 px-5">N° Dévis</th>
-                <th className="py-4 px-5">Date Émission</th>
-                <th className="py-4 px-5">Client</th>
-                <th className="py-4 px-5 text-right">Articles</th>
-                <th className="py-4 px-5 text-right">Total Net</th>
-                <th className="py-4 px-5 text-center">Statut</th>
-                <th className="py-4 px-5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filteredQuotes.map((q) => {
-                const totalItemsCount = q.items.reduce((sum, item) => sum + item.quantity, 0);
-
-                return (
-                  <tr key={q.id} className="hover:bg-neutral-50/50 transition-colors group">
-                    <td className="py-4 px-5 font-mono font-black text-foreground">{q.number}</td>
-                    <td className="py-4 px-5 text-muted font-bold">{q.date}</td>
-                    <td className="py-4 px-5 text-foreground">
-                      <div className="font-bold text-foreground">{q.customerName}</div>
-                      <div className="text-[10px] text-muted font-semibold mt-0.5">Valide jusqu'au {q.expiryDate}</div>
-                    </td>
-                    <td className="py-4 px-5 text-right text-muted font-mono font-black">{totalItemsCount}</td>
-                    <td className="py-4 px-5 text-right font-mono font-black text-foreground">{formatFCFA(q.total)}</td>
-                    <td className="py-4 px-5 text-center">
-                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                        q.status === 'Accepté' ? 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300' :
-                        q.status === 'Envoyé' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-800 dark:text-blue-300' :
-                        q.status === 'Brouillon' ? 'bg-neutral-100 dark:bg-neutral-700 text-foreground' :
-                        'bg-rose-100 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300'
-                      }`}>
-                        {q.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-5 text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        {/* Status controls */}
-                        {q.status === 'Envoyé' && (
-                          <Button
-                            variant="icon"
-                            onClick={() => onUpdateQuoteStatus(q.id, 'Accepté')}
-                            title="Marquer comme Accepté"
-                            className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                          >
-                            <Check className="h-4.5 w-4.5 stroke-[2.5]" />
-                          </Button>
-                        )}
-                        
-                        {/* ERPNext Action: Convert to sales invoice */}
-                        {q.status === 'Accepté' && (
-                          <Button
-                            variant="success"
-                            size="sm"
-                            onClick={() => handleOpenConvert(q)}
-                            className="font-black text-[9px] uppercase tracking-wider shadow-sm"
-                          >
-                            <ArrowRight className="h-3 w-3 stroke-[3]" />
-                            <span>Facturer</span>
-                          </Button>
-                        )}
-
-                        {/* View/Print template */}
-                        <Button
-                          variant="icon"
-                          onClick={() => setSelectedQuoteForPrint(q)}
-                          title="Imprimer / Devis Proforma"
-                        >
-                          <Printer className="h-4.5 w-4.5 stroke-[2]" />
-                        </Button>
-
-                        <Button
-                          variant="icon"
-                          onClick={() => {
-                            if (confirm("Supprimer ce dévis ?")) {
-                              onDeleteQuote(q.id);
-                            }
-                          }}
-                          className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                        >
-                          <Trash2 className="h-4.5 w-4.5 stroke-[2]" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filteredQuotes.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="py-16 text-center text-muted font-mono italic">
-                    Aucun devis enregistré ou correspondant à la recherche.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <Table
+          columns={quotesColumns}
+          data={quotesData}
+          emptyMessage="Aucun devis enregistré ou correspondant à la recherche."
+        />
       </div>
 
       {/* Mobile Cards */}
@@ -471,39 +501,10 @@ export default function DevisView({
               </div>
             ) : (
               <div className="border-2 border-border rounded-[2rem] overflow-hidden bg-surface shadow-xs">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-neutral-50 dark:bg-neutral-800 font-bold text-[10px] uppercase tracking-wider text-muted border-b border-border">
-                      <th className="py-3 px-4">Désignation</th>
-                      <th className="py-3 px-4 text-center">Unité</th>
-                      <th className="py-3 px-4 text-center">Quantité</th>
-                      <th className="py-3 px-4 text-right">Prix Unitaire (FCFA)</th>
-                      <th className="py-3 px-4 text-right">Total HT (FCFA)</th>
-                      <th className="py-3 px-4 text-right"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {quoteLines.map((line, idx) => (
-                      <tr key={idx} className="hover:bg-neutral-50/50">
-                        <td className="py-3 px-4 font-bold text-foreground">{line.itemName}</td>
-                        <td className="py-3 px-4 text-center text-muted font-semibold">{line.unit}</td>
-                        <td className="py-3 px-4 text-center font-mono font-black text-foreground bg-neutral-50/30">{line.quantity}</td>
-                        <td className="py-3 px-4 text-right font-mono text-muted font-bold">{formatFCFA(line.price)}</td>
-                        <td className="py-3 px-4 text-right font-mono font-black text-foreground">{formatFCFA(line.total)}</td>
-                        <td className="py-3 px-4 text-right">
-                          <Button
-                            variant="icon"
-                            type="button"
-                            onClick={() => removeLine(idx)}
-                            className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                          >
-                            <Trash2 className="h-4.5 w-4.5" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <Table
+                  columns={lineItemColumns}
+                  data={lineItemData}
+                />
               </div>
             )}
           </div>
@@ -564,19 +565,22 @@ export default function DevisView({
               <div className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 px-6 py-4 shrink-0 flex items-center justify-between border-b-2 border-neutral-800 dark:border-neutral-300">
                 <span className="font-black text-xs font-mono uppercase tracking-wider text-muted">Modèle de Devis Proforma</span>
                 <div className="flex space-x-3 items-center">
-                  <button
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={printQuote}
-                    className="bg-amber-500 hover:bg-amber-600 text-slate-950 dark:text-neutral-900 px-4 py-2 rounded-xl font-black text-xs flex items-center space-x-1.5 cursor-pointer transition-all hover:scale-[1.02]"
+                    className="bg-amber-500 hover:bg-amber-600 text-slate-950 dark:text-neutral-900 flex items-center space-x-1.5 hover:scale-[1.02]"
                   >
                     <Printer className="h-4 w-4 stroke-[2.5]" />
                     <span>Imprimer</span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="icon"
                     onClick={() => setSelectedQuoteForPrint(null)}
-                    className="text-muted dark:text-neutral-600 hover:text-white dark:hover:text-neutral-900 cursor-pointer transition-colors p-1"
+                    className="text-muted dark:text-neutral-600 hover:text-white dark:hover:text-neutral-900"
                   >
                     <X className="h-5 w-5 stroke-[2.5]" />
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -632,28 +636,10 @@ export default function DevisView({
 
                 {/* Items Grid */}
                 <div className="mb-6">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-neutral-50 dark:bg-neutral-800 font-bold text-muted border-b-2 border-border uppercase text-[9px] tracking-wider">
-                        <th className="py-2.5 px-3">Réf / Article</th>
-                        <th className="py-2.5 px-3 text-center">Unité</th>
-                        <th className="py-2.5 px-3 text-center">Qté</th>
-                        <th className="py-2.5 px-3 text-right">P.U. (FCFA)</th>
-                        <th className="py-2.5 px-3 text-right">Total (FCFA)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {selectedQuoteForPrint.items.map((line, idx) => (
-                        <tr key={idx}>
-                          <td className="py-2.5 px-3 font-bold text-foreground">{line.itemName}</td>
-                          <td className="py-2.5 px-3 text-center text-muted font-semibold">{line.unit}</td>
-                          <td className="py-2.5 px-3 text-center font-mono font-black text-foreground">{line.quantity}</td>
-                          <td className="py-2.5 px-3 text-right font-mono font-bold text-muted">{formatFCFA(line.price)}</td>
-                          <td className="py-2.5 px-3 text-right font-mono font-black text-foreground">{formatFCFA(line.total)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <Table
+                    columns={printColumns}
+                    data={printData}
+                  />
                 </div>
 
                 {/* Financial math block */}

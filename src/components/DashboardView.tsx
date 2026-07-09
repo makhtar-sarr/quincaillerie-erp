@@ -15,6 +15,7 @@ import {
 import { Item, Invoice, Quote, Customer, StockMovement } from '../types';
 import { formatFCFA } from '../utils/data';
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics';
+import { Table } from './ui/Table';
 import { Button } from './ui/Button';
 
 interface DashboardViewProps {
@@ -37,6 +38,35 @@ export default function DashboardView({
   onQuickRestock
 }: DashboardViewProps) {
   const { metrics, salesByCategory, recentSales, recentMovements } = useDashboardMetrics(items, invoices, customers, movements);
+
+  const lowStockColumns = [
+    { key: 'article', label: 'Article', className: 'truncate max-w-[160px]' },
+    { key: 'ref', label: 'Réf' },
+    { key: 'stock', label: 'En Stock', className: 'text-center' },
+    { key: 'seuilMin', label: 'Seuil Min', className: 'text-center' },
+    { key: 'action', label: 'Action (Commande)', className: 'text-right' },
+  ];
+
+  const lowStockData = metrics.lowStockItems.slice(0, 5).map((item) => ({
+    article: <span className="font-bold text-foreground">{item.name}</span>,
+    ref: <span className="font-mono text-[10px] text-muted">{item.ref}</span>,
+    stock: (
+      <span className={`px-2.5 py-0.5 rounded-full font-extrabold font-mono text-[10px] ${item.stockCount === 0 ? 'bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400' : 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400'}`}>
+        {item.stockCount} {item.unit}s
+      </span>
+    ),
+    seuilMin: <span className="text-muted font-mono font-semibold">{item.minStock}</span>,
+    action: (
+      <div className="flex justify-end space-x-1.5">
+        <Button onClick={() => onQuickRestock(item.id, 100)} variant="success" size="sm">
+          +100 {item.unit}s
+        </Button>
+        <Button onClick={() => onQuickRestock(item.id, 500)} variant="success" size="sm">
+          +500
+        </Button>
+      </div>
+    ),
+  }));
 
   return (
     <div id="dashboard-view-container" className="space-y-6">
@@ -234,50 +264,11 @@ export default function DashboardView({
               <p className="text-[10px] text-muted mt-1">Tous les articles dépassent le stock de sécurité.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto h-56 scrollbar-thin">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-border text-muted font-bold uppercase text-[10px] tracking-wider">
-                    <th className="py-2.5 pb-2">Article</th>
-                    <th className="py-2.5 pb-2">Réf</th>
-                    <th className="py-2.5 pb-2 text-center">En Stock</th>
-                    <th className="py-2.5 pb-2 text-center">Seuil Min</th>
-                    <th className="py-2.5 pb-2 text-right">Action (Commande)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {metrics.lowStockItems.slice(0, 5).map((item) => (
-                    <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
-                      <td className="py-2.5 font-bold text-foreground truncate max-w-[160px]">{item.name}</td>
-                      <td className="py-2.5 text-muted font-mono text-[10px]">{item.ref}</td>
-                      <td className="py-2.5 text-center">
-                        <span className={`px-2.5 py-0.5 rounded-full font-extrabold font-mono text-[10px] ${item.stockCount === 0 ? 'bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400' : 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400'}`}>
-                          {item.stockCount} {item.unit}s
-                        </span>
-                      </td>
-                      <td className="py-2.5 text-center text-muted font-mono font-semibold">{item.minStock}</td>
-                      <td className="py-2.5 text-right">
-                        <div className="flex justify-end space-x-1.5">
-                          <Button
-                            onClick={() => onQuickRestock(item.id, 100)}
-                            variant="success"
-                            size="sm"
-                          >
-                            +100 {item.unit}s
-                          </Button>
-                          <Button
-                            onClick={() => onQuickRestock(item.id, 500)}
-                            variant="success"
-                            size="sm"
-                          >
-                            +500
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="h-56 scrollbar-thin overflow-x-auto">
+              <Table 
+                columns={lowStockColumns}
+                data={lowStockData}
+              />
               {metrics.lowStockItems.length > 5 && (
                 <div className="text-center py-2 text-[10px] text-amber-600 dark:text-amber-400 italic font-bold">
                   + {metrics.lowStockItems.length - 5} autres articles en stock critique
@@ -347,13 +338,15 @@ export default function DashboardView({
               <Package className="h-4.5 w-4.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span>Derniers Mouvements</span>
             </h3>
-            <button 
+            <Button 
               onClick={() => onNavigate('items')} 
-              className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-bold flex items-center bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/40 px-2.5 py-1.5 rounded-xl cursor-pointer transition-colors"
+              variant="secondary" 
+              size="sm"
+              className="flex items-center border-0 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/40"
             >
               Historique complet
               <ArrowUpRight className="h-3 w-3 ml-1" />
-            </button>
+            </Button>
           </div>
 
           <div className="space-y-3">

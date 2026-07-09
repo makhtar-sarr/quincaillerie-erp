@@ -22,6 +22,7 @@ import { formatFCFA } from '../utils/data';
 import { useInvoiceForm } from '../hooks/useInvoiceForm';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
+import { Table } from './ui/Table';
 
 interface InvoicesViewProps {
   invoices: Invoice[];
@@ -30,6 +31,34 @@ interface InvoicesViewProps {
   onAddInvoice: (invoice: Omit<Invoice, 'id' | 'number'>, operator: string) => void;
   onDeleteInvoice: (id: string) => void;
 }
+
+const invoicesListColumns = [
+  { key: 'number', label: 'N° Facture', className: 'font-mono font-bold text-foreground' },
+  { key: 'date', label: 'Date', className: 'text-muted font-semibold' },
+  { key: 'customerName', label: 'Client', className: 'font-bold text-foreground' },
+  { key: 'paymentMethod', label: 'Mode', className: 'text-center' },
+  { key: 'total', label: 'Net Facturé', className: 'text-right font-mono font-bold text-foreground' },
+  { key: 'amountPaid', label: 'Encaissé', className: 'text-right font-mono font-bold text-emerald-700' },
+  { key: 'status', label: 'Paiement', className: 'text-center' },
+  { key: 'actions', label: 'Actions', className: 'text-right' },
+];
+
+const lineItemsColumns = [
+  { key: 'itemName', label: 'Désignation', className: 'font-bold text-foreground' },
+  { key: 'unit', label: 'Unité', className: 'text-center text-muted font-semibold' },
+  { key: 'quantity', label: 'Quantité', className: 'text-center font-mono font-black text-foreground' },
+  { key: 'price', label: 'Prix Unitaire (FCFA)', className: 'text-right font-mono text-muted font-bold' },
+  { key: 'total', label: 'Total HT (FCFA)', className: 'text-right font-mono font-black text-foreground' },
+  { key: 'actions', label: '', className: 'text-right' },
+];
+
+const printColumns = [
+  { key: 'itemName', label: 'Désignation de l\'Article', className: 'font-bold text-foreground' },
+  { key: 'unit', label: 'Unité', className: 'text-center text-muted font-semibold' },
+  { key: 'quantity', label: 'Qté', className: 'text-center font-mono font-black text-foreground' },
+  { key: 'price', label: 'P.U. (FCFA)', className: 'text-right font-mono font-bold text-muted' },
+  { key: 'total', label: 'Total (FCFA)', className: 'text-right font-mono font-black text-foreground' },
+];
 
 export default function InvoicesView({
   invoices,
@@ -104,6 +133,87 @@ export default function InvoicesView({
     
     return { totalSales, totalCash, totalWave, totalOM };
   }, [invoices]);
+
+  const invoicesListData = filteredInvoices.map(inv => {
+    const unpaid = inv.total - inv.amountPaid;
+    return {
+      number: inv.number,
+      date: inv.date,
+      customerName: inv.customerName,
+      paymentMethod: (
+        <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+          inv.paymentMethod === 'Wave' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400' :
+          inv.paymentMethod === 'Orange Money' ? 'bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400' :
+          'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300'
+        }`}>
+          {inv.paymentMethod}
+        </span>
+      ),
+      total: formatFCFA(inv.total),
+      amountPaid: formatFCFA(inv.amountPaid),
+      status: (
+        <>
+          <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+            inv.status === 'Payé' ? 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300' :
+            inv.status === 'Partiel' ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 animate-pulse' :
+            'bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400'
+          }`}>
+            {inv.status}
+          </span>
+          {unpaid > 0 && (
+            <span className="text-[10px] text-rose-600 dark:text-rose-400 font-black font-mono block mt-1">-{formatFCFA(unpaid)}</span>
+          )}
+        </>
+      ),
+      actions: (
+        <div className="flex items-center justify-end space-x-1">
+          <Button
+            variant="icon"
+            onClick={() => setSelectedInvoiceForPrint(inv)}
+            title="Imprimer la Facture / Reçu"
+            className="p-1.5"
+          >
+            <Printer className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="icon"
+            onClick={() => setDeleteTarget(inv)}
+            title="Supprimer la facture"
+            className="p-1.5 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    };
+  });
+
+  const lineItemsData = invoiceLines.map((line, idx) => ({
+    itemName: line.itemName,
+    unit: line.unit,
+    quantity: line.quantity,
+    price: formatFCFA(line.price),
+    total: formatFCFA(line.total),
+    actions: (
+      <Button
+        variant="icon"
+        onClick={() => removeLine(idx)}
+        className="p-1.5 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    ),
+  }));
+
+  const printData = selectedInvoiceForPrint
+    ? selectedInvoiceForPrint.items.map(line => ({
+        itemName: line.itemName,
+        unit: line.unit,
+        quantity: line.quantity,
+        price: formatFCFA(line.price),
+        total: formatFCFA(line.total),
+      }))
+    : [];
 
   return (
     <div id="invoices-view-root" className="space-y-6">
@@ -205,86 +315,72 @@ export default function InvoicesView({
 
       {/* Invoices List Table - Desktop */}
       <div className="hidden md:block bg-surface rounded-3xl border-2 border-border shadow-[0_10px_40px_rgb(0,0,0,0.015)] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-neutral-50 dark:bg-neutral-800 border-b border-border text-muted font-bold uppercase text-[10px] tracking-wider">
-                <th className="py-3.5 px-5">N° Facture</th>
-                <th className="py-3.5 px-5">Date</th>
-                <th className="py-3.5 px-5">Client</th>
-                <th className="py-3.5 px-5 text-center">Mode</th>
-                <th className="py-3.5 px-5 text-right">Net Facturé</th>
-                <th className="py-3.5 px-5 text-right">Encaissé</th>
-                <th className="py-3.5 px-5 text-center">Paiement</th>
-                <th className="py-3.5 px-5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filteredInvoices.map((inv) => {
-                const unpaid = inv.total - inv.amountPaid;
-
-                return (
-                  <tr key={inv.id} className="hover:bg-neutral-50/50 transition-colors">
-                    <td className="py-3.5 px-5 font-mono font-bold text-foreground">{inv.number}</td>
-                    <td className="py-3.5 px-5 text-muted font-semibold">{inv.date}</td>
-                    <td className="py-3.5 px-5 font-bold text-foreground">{inv.customerName}</td>
-                    <td className="py-3.5 px-5 text-center">
-                      <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
-                        inv.paymentMethod === 'Wave' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400' :
-                        inv.paymentMethod === 'Orange Money' ? 'bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400' :
-                        'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300'
-                      }`}>
-                        {inv.paymentMethod}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-5 text-right font-mono font-bold text-foreground">{formatFCFA(inv.total)}</td>
-                    <td className="py-3.5 px-5 text-right font-mono font-bold text-emerald-700">{formatFCFA(inv.amountPaid)}</td>
-                    <td className="py-3.5 px-5 text-center">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                        inv.status === 'Payé' ? 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300' :
-                        inv.status === 'Partiel' ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 animate-pulse' :
-                        'bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400'
-                      }`}>
-                        {inv.status}
-                      </span>
-                      {unpaid > 0 && (
-                        <span className="text-[10px] text-rose-600 dark:text-rose-400 font-black font-mono block mt-1">-{formatFCFA(unpaid)}</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-5 text-right">
-                      <div className="flex items-center justify-end space-x-1">
-                        {/* Print Invoice trigger */}
-                        <Button
-                          variant="icon"
-                          onClick={() => setSelectedInvoiceForPrint(inv)}
-                          title="Imprimer la Facture / Reçu"
-                          className="p-1.5"
-                        >
-                          <Printer className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="icon"
-                          onClick={() => setDeleteTarget(inv)}
-                          title="Supprimer la facture"
-                          className="p-1.5 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filteredInvoices.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-muted font-mono italic">
-                    Aucune facture enregistrée ou correspondante à la recherche.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <Table
+          columns={[
+            { key: 'number', label: 'N° Facture', className: 'font-mono font-bold' },
+            { key: 'date', label: 'Date', className: 'text-muted font-semibold' },
+            { key: 'client', label: 'Client', className: 'font-bold' },
+            { key: 'mode', label: 'Mode', className: 'text-center' },
+            { key: 'total', label: 'Net Facturé', className: 'text-right font-mono font-bold' },
+            { key: 'amountPaid', label: 'Encaissé', className: 'text-right font-mono font-bold text-emerald-700' },
+            { key: 'status', label: 'Paiement', className: 'text-center' },
+            { key: 'actions', label: 'Actions', className: 'text-right' },
+          ]}
+          data={filteredInvoices.map((inv) => {
+            const unpaid = inv.total - inv.amountPaid;
+            return {
+              number: inv.number,
+              date: inv.date,
+              client: inv.customerName,
+              mode: (
+                <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+                  inv.paymentMethod === 'Wave' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400' :
+                  inv.paymentMethod === 'Orange Money' ? 'bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400' :
+                  'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300'
+                }`}>
+                  {inv.paymentMethod}
+                </span>
+              ),
+              total: formatFCFA(inv.total),
+              amountPaid: formatFCFA(inv.amountPaid),
+              status: (
+                <>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                    inv.status === 'Payé' ? 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300' :
+                    inv.status === 'Partiel' ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 animate-pulse' :
+                    'bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400'
+                  }`}>
+                    {inv.status}
+                  </span>
+                  {unpaid > 0 && (
+                    <span className="text-[10px] text-rose-600 dark:text-rose-400 font-black font-mono block mt-1">-{formatFCFA(unpaid)}</span>
+                  )}
+                </>
+              ),
+              actions: (
+                <div className="flex items-center justify-end space-x-1">
+                  <Button
+                    variant="icon"
+                    onClick={() => setSelectedInvoiceForPrint(inv)}
+                    title="Imprimer la Facture / Reçu"
+                    className="p-1.5"
+                  >
+                    <Printer className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="icon"
+                    onClick={() => setDeleteTarget(inv)}
+                    title="Supprimer la facture"
+                    className="p-1.5 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ),
+            };
+          })}
+          emptyMessage="Aucune facture enregistrée ou correspondante à la recherche."
+        />
       </div>
 
       {/* Mobile Cards */}
@@ -469,38 +565,32 @@ export default function InvoicesView({
               </div>
             ) : (
               <div className="border-2 border-border rounded-[2rem] overflow-hidden bg-surface shadow-xs">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-neutral-50 dark:bg-neutral-800 font-bold text-[10px] uppercase tracking-wider text-muted border-b border-border">
-                      <th className="py-3 px-4">Désignation</th>
-                      <th className="py-3 px-4 text-center">Unité</th>
-                      <th className="py-3 px-4 text-center">Quantité</th>
-                      <th className="py-3 px-4 text-right">Prix Unitaire (FCFA)</th>
-                      <th className="py-3 px-4 text-right">Total HT (FCFA)</th>
-                      <th className="py-3 px-4 text-right"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {invoiceLines.map((line, idx) => (
-                      <tr key={idx} className="hover:bg-neutral-50/50">
-                        <td className="py-3 px-4 font-bold text-foreground">{line.itemName}</td>
-                        <td className="py-3 px-4 text-center text-muted font-semibold">{line.unit}</td>
-                        <td className="py-3 px-4 text-center font-mono font-black text-foreground bg-neutral-50/30">{line.quantity}</td>
-                        <td className="py-3 px-4 text-right font-mono text-muted font-bold">{formatFCFA(line.price)}</td>
-                        <td className="py-3 px-4 text-right font-mono font-black text-foreground">{formatFCFA(line.total)}</td>
-                        <td className="py-3 px-4 text-right">
-                          <Button
-                            variant="icon"
-                            onClick={() => removeLine(idx)}
-                            className="p-1.5 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <Table
+                  columns={[
+                    { key: 'designation', label: 'Désignation', className: 'font-bold' },
+                    { key: 'unit', label: 'Unité', className: 'text-center text-muted font-semibold' },
+                    { key: 'quantity', label: 'Quantité', className: 'text-center font-mono font-black' },
+                    { key: 'price', label: 'Prix Unitaire (FCFA)', className: 'text-right font-mono text-muted font-bold' },
+                    { key: 'totalHT', label: 'Total HT (FCFA)', className: 'text-right font-mono font-black' },
+                    { key: 'delete', label: '', className: 'text-right' },
+                  ]}
+                  data={invoiceLines.map((line, idx) => ({
+                    designation: line.itemName,
+                    unit: line.unit,
+                    quantity: line.quantity,
+                    price: formatFCFA(line.price),
+                    totalHT: formatFCFA(line.total),
+                    delete: (
+                      <Button
+                        variant="icon"
+                        onClick={() => removeLine(idx)}
+                        className="p-1.5 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    ),
+                  }))}
+                />
               </div>
             )}
           </div>
@@ -721,28 +811,22 @@ export default function InvoicesView({
 
                 {/* Line Items table */}
                 <div className="mb-6">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-neutral-50 dark:bg-neutral-800 font-bold text-muted border-b-2 border-border uppercase text-[9px] tracking-wider">
-                        <th className="py-2.5 px-3">Désignation de l'Article</th>
-                        <th className="py-2.5 px-3 text-center">Unité</th>
-                        <th className="py-2.5 px-3 text-center">Qté</th>
-                        <th className="py-2.5 px-3 text-right">P.U. (FCFA)</th>
-                        <th className="py-2.5 px-3 text-right">Total (FCFA)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {selectedInvoiceForPrint.items.map((line, idx) => (
-                        <tr key={idx}>
-                          <td className="py-2.5 px-3 font-bold text-foreground">{line.itemName}</td>
-                          <td className="py-2.5 px-3 text-center text-muted font-semibold">{line.unit}</td>
-                          <td className="py-2.5 px-3 text-center font-mono font-black text-foreground">{line.quantity}</td>
-                          <td className="py-2.5 px-3 text-right font-mono font-bold text-muted">{formatFCFA(line.price)}</td>
-                          <td className="py-2.5 px-3 text-right font-mono font-black text-foreground">{formatFCFA(line.total)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <Table
+                    columns={[
+                      { key: 'designation', label: "Désignation de l'Article", className: 'font-bold' },
+                      { key: 'unit', label: 'Unité', className: 'text-center text-muted font-semibold' },
+                      { key: 'quantity', label: 'Qté', className: 'text-center font-mono font-black' },
+                      { key: 'price', label: 'P.U. (FCFA)', className: 'text-right font-mono font-bold text-muted' },
+                      { key: 'total', label: 'Total (FCFA)', className: 'text-right font-mono font-black' },
+                    ]}
+                    data={selectedInvoiceForPrint.items.map((line) => ({
+                      designation: line.itemName,
+                      unit: line.unit,
+                      quantity: line.quantity,
+                      price: formatFCFA(line.price),
+                      total: formatFCFA(line.total),
+                    }))}
+                  />
                 </div>
 
                 {/* Invoice calculations summary */}

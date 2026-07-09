@@ -162,20 +162,22 @@ export default function ContactsView({
           <p className="text-xs text-muted mt-1 font-semibold">Gérez vos clients fidèles, entrepreneurs locaux, conducteurs de travaux et vos fournisseurs grossistes</p>
         </div>
         <div className="flex bg-neutral-100 dark:bg-neutral-800 p-1 rounded-2xl mt-4 sm:mt-0 self-start sm:self-center text-xs border border-border">
-          <button
+          <Button
+            variant="icon"
             onClick={() => { setActiveTab('customers'); setSearch(''); }}
-            className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer ${activeTab === 'customers' ? 'bg-surface text-foreground shadow-xs' : 'text-muted hover:text-foreground'}`}
+            className={`flex items-center space-x-1.5 px-4 py-2 font-black uppercase tracking-wider text-[10px] transition-colors hover:bg-transparent dark:hover:bg-transparent ${activeTab === 'customers' ? 'bg-surface text-foreground shadow-xs' : 'text-muted hover:text-foreground dark:hover:text-foreground'}`}
           >
             <Users className="h-4 w-4 stroke-[2.5]" />
             <span>Clients ({customers.length})</span>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="icon"
             onClick={() => { setActiveTab('suppliers'); setSearch(''); }}
-            className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer ${activeTab === 'suppliers' ? 'bg-surface text-foreground shadow-xs' : 'text-muted hover:text-foreground'}`}
+            className={`flex items-center space-x-1.5 px-4 py-2 font-black uppercase tracking-wider text-[10px] transition-colors hover:bg-transparent dark:hover:bg-transparent ${activeTab === 'suppliers' ? 'bg-surface text-foreground shadow-xs' : 'text-muted hover:text-foreground dark:hover:text-foreground'}`}
           >
             <Truck className="h-4 w-4 stroke-[2.5]" />
             <span>Fournisseurs ({suppliers.length})</span>
-          </button>
+          </Button>
         </div>
       </div>
 
