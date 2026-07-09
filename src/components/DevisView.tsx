@@ -483,7 +483,7 @@ export default function DevisView({
                   variant="dark"
                   onClick={handleAddLine}
                   disabled={!tempItemId}
-                  className="w-full disabled:bg-neutral-100 dark:disabled:bg-neutral-700 disabled:text-muted flex items-center justify-center space-x-1.5"
+                  className="w-full disabled:bg-neutral-100 dark:disabled:bg-neutral-200 disabled:text-muted flex items-center justify-center space-x-1.5"
                 >
                   <Plus className="h-4 w-4 stroke-[2.5]" />
                   <span>Ajouter la ligne</span>

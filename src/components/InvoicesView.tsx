@@ -547,7 +547,7 @@ export default function InvoicesView({
                   variant="dark"
                   onClick={handleAddLine}
                   disabled={!tempItemId}
-                  className="w-full disabled:bg-neutral-100 dark:disabled:bg-neutral-700 disabled:text-muted"
+                  className="w-full disabled:bg-neutral-100 dark:disabled:bg-neutral-200 disabled:text-muted"
                 >
                   <Plus className="h-4 w-4 stroke-[2.5]" />
                   <span>Ajouter la ligne</span>
