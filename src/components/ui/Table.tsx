@@ -37,7 +37,7 @@ export function Table({
       {/* ── Desktop table view ── */}
       <table className={cn('w-full', mobileCard && 'hidden sm:table')}>
         <thead>
-          <tr className="bg-neutral-50 dark:bg-neutral-800 border-b border-border">
+          <tr className="bg-neutral-50 dark:bg-neutral-100 border-b border-border">
             {columns.map((col) => (
               <th
                 key={col.key}
