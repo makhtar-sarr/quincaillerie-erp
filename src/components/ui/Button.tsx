@@ -41,7 +41,7 @@ export function Button({
   return (
     <button
       className={cn(
-        'rounded-xl font-bold cursor-pointer transition-all',
+        'inline-flex items-center gap-1.5 rounded-xl font-bold cursor-pointer transition-all',
         variantStyles[variant],
         variant !== 'icon' && sizeStyles[size],
         className
