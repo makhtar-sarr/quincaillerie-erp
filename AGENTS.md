@@ -22,12 +22,40 @@ Système de gestion (React 19 + Vite) pour quincailleries sénégalaises : stock
 - **Seed/reference data**: `src/utils/data.ts` (DEFAULT_SETTINGS, INITIAL_ITEMS, etc.) — used to bootstrap localStorage on first load.
 - **Views** (6 components in `src/components/`): `DashboardView`, `ItemsView` (catalogue + stock), `DevisView` (quotes), `InvoicesView` (sales), `ContactsView` (clients + fournisseurs), `SettingsView`.
 
+## Routing (React Router v7)
+
+- **Router**: BrowserRouter in `src/App.tsx` wrapping Layout + Routes
+- **Routes**: Lazy-loaded via React.lazy() in `src/routes.tsx` (6 routes + redirect `/` → `/dashboard`)
+- **Navigation**: Sidebar with NavLink (desktop), hamburger menu with backdrop (mobile)
+- **Layout**: `src/components/Layout.tsx` — sticky sidebar (desktop), mobile top navbar + slide-in menu
+
+## UI Components (6 reusable components)
+
+All in `src/components/ui/`:
+
+- **Button**: 6 variants (primary, secondary, danger, success, dark, icon) × 3 sizes (sm, md, lg). Uses `inline-flex items-center gap-1.5` for icon alignment.
+- **Input**: Default + search variants, error state, min 44px height. Dark mode: `dark:bg-neutral-100 dark:text-neutral-800`.
+- **Modal**: AnimatePresence + motion.div, 5 sizes (sm, md, lg, xl, full), ESC/backdrop/close, focus trap, danger variant.
+- **Card**: With optional `borderAccent` prop for highlighted cards.
+- **Badge**: 5 variants (primary, success, warning, danger, neutral).
+- **Table**: Desktop table + mobile card mode via `mobileCard` prop, empty state, row click handler.
+
+## Design System & Dark Mode
+
+- **Design tokens**: Defined in `src/index.css` using `@theme` directive (primary, success, warning, danger, neutral, surface, background, foreground, muted, border, radius, shadow)
+- **Dark mode**: Class-based `.dark` on `<html>`, warm stone palette (NOT cold slate)
+- **Theme hook**: `src/hooks/useTheme.ts` — ThemeContext + ThemeProvider + useTheme hook (mode, resolved, setMode, toggle)
+- **Toggle**: SettingsView has Clair/Sombre/Système buttons
+- **Palette inversion**: neutral-50→dark, neutral-800→near-white. Use `dark:bg-neutral-100` for backgrounds, NOT `dark:bg-neutral-800`.
+- **CSS transition**: Smooth dark mode switching via `* { transition: background-color 0.2s, color 0.2s, border-color 0.2s }`
+
 ## Frontend stack specifics
 
 - **Tailwind CSS v4** — configured via `@tailwindcss/vite` plugin in `vite.config.ts`. There is **no `tailwind.config.*` or `postcss.config.*`** file. Theme is extended in `src/index.css` using `@theme` directive. Do not expect PostCSS-based Tailwind.
 - **Custom fonts**: Inter (sans), Outfit (display), JetBrains Mono (mono) loaded via `@import` in `src/index.css` with `@theme` tokens `--font-sans`, `--font-display`, `--font-mono`.
 - **Animation**: `motion` v12, imported as `motion/react` (the post-framer-motion package). Do not import from `framer-motion`.
 - **Icons**: `lucide-react` throughout.
+- **Class utilities**: `cn()` from `@/lib/utils` (clsx + tailwind-merge) for conditional classes.
 
 ## Server-side dependencies (AI Studio runtime, not in `src/`)
 
