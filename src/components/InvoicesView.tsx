@@ -144,7 +144,7 @@ export default function InvoicesView({
         <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
           inv.paymentMethod === 'Wave' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400' :
           inv.paymentMethod === 'Orange Money' ? 'bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400' :
-          'bg-neutral-100 dark:bg-neutral-200 text-neutral-600 dark:text-neutral-300'
+          'bg-neutral-100 dark:bg-neutral-200 text-neutral-600 dark:text-neutral-400'
         }`}>
           {inv.paymentMethod}
         </span>
@@ -336,7 +336,7 @@ export default function InvoicesView({
                 <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
                   inv.paymentMethod === 'Wave' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400' :
                   inv.paymentMethod === 'Orange Money' ? 'bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400' :
-                  'bg-neutral-100 dark:bg-neutral-200 text-neutral-600 dark:text-neutral-300'
+                  'bg-neutral-100 dark:bg-neutral-200 text-neutral-600 dark:text-neutral-400'
                 }`}>
                   {inv.paymentMethod}
                 </span>
@@ -408,7 +408,7 @@ export default function InvoicesView({
                 <span className={`inline-block mt-1 px-2 py-0.5 rounded-lg text-[10px] font-black ${
                   inv.paymentMethod === 'Wave' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400' :
                   inv.paymentMethod === 'Orange Money' ? 'bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400' :
-                  'bg-neutral-100 dark:bg-neutral-200 text-neutral-600 dark:text-neutral-300'
+                  'bg-neutral-100 dark:bg-neutral-200 text-neutral-600 dark:text-neutral-400'
                 }`}>
                   {inv.paymentMethod}
                 </span>
