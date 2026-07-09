@@ -14,7 +14,7 @@ const variantStyles: Record<Variant, string> = {
   success: 'bg-success-light text-success dark:bg-emerald-950/30 dark:text-emerald-400',
   warning: 'bg-warning-light text-warning dark:bg-orange-950/30 dark:text-orange-400',
   danger: 'bg-danger-light text-danger dark:bg-rose-950/30 dark:text-rose-400',
-  neutral: 'bg-neutral-100 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300',
+  neutral: 'bg-neutral-100 text-neutral-600 dark:bg-neutral-200 dark:text-neutral-400',
 };
 
 export function Badge({variant = 'neutral', children, className}: BadgeProps) {

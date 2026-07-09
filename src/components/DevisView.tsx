@@ -136,7 +136,7 @@ export default function DevisView({
         <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
           q.status === 'Accepté' ? 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300' :
           q.status === 'Envoyé' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-800 dark:text-blue-300' :
-          q.status === 'Brouillon' ? 'bg-neutral-100 dark:bg-neutral-700 text-foreground' :
+          q.status === 'Brouillon' ? 'bg-neutral-100 dark:bg-neutral-200 text-foreground' :
           'bg-rose-100 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300'
         }`}>
           {q.status}
@@ -320,7 +320,7 @@ export default function DevisView({
                 <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
                   q.status === 'Accepté' ? 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300' :
                   q.status === 'Envoyé' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-800 dark:text-blue-300' :
-                  q.status === 'Brouillon' ? 'bg-neutral-100 dark:bg-neutral-700 text-foreground' :
+                  q.status === 'Brouillon' ? 'bg-neutral-100 dark:bg-neutral-200 text-foreground' :
                   'bg-rose-100 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300'
                 }`}>
                   {q.status}
@@ -411,7 +411,7 @@ export default function DevisView({
           </div>
         }
       >
-        <div className="space-y-6 text-xs bg-neutral-50/30 dark:bg-neutral-800/30 -m-6 p-6">
+        <div className="space-y-6 text-xs bg-neutral-50/30 dark:bg-neutral-100/30 -m-6 p-6">
           {/* Customer and dates selection */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -520,7 +520,7 @@ export default function DevisView({
                 className="w-full border border-border p-3 rounded-2xl h-24 focus:ring-2 focus:ring-primary focus:outline-hidden font-medium text-xs"
               />
             </div>
-            <div className="bg-neutral-50/50 dark:bg-neutral-800/50 p-5 rounded-[2rem] border-2 border-border flex flex-col justify-between">
+            <div className="bg-neutral-50/50 dark:bg-neutral-100/50 p-5 rounded-[2rem] border-2 border-border flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-muted font-semibold">
                   <span>Sous-total HT :</span>
@@ -605,7 +605,7 @@ export default function DevisView({
                 </div>
 
                 {/* Relational details */}
-                <div className="grid grid-cols-2 gap-8 mb-6 bg-neutral-50 dark:bg-neutral-800 p-4 rounded-2xl border-2 border-border/50">
+                <div className="grid grid-cols-2 gap-8 mb-6 bg-neutral-50 dark:bg-neutral-100 p-4 rounded-2xl border-2 border-border/50">
                   <div>
                     <span className="text-[9px] text-muted block font-black uppercase tracking-wider font-mono">DESTINATAIRE</span>
                     <span className="font-black text-foreground text-xs block mt-1">{selectedQuoteForPrint.customerName}</span>
@@ -646,7 +646,7 @@ export default function DevisView({
                 <div className="flex justify-between items-start border-t-2 border-border pt-5">
                   <div className="max-w-xs text-[10px] text-muted font-semibold leading-relaxed">
                     {selectedQuoteForPrint.notes && (
-                      <div className="text-muted font-medium not-italic mt-2 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-2xl border-2 border-border">
+                      <div className="text-muted font-medium not-italic mt-2 p-3 bg-neutral-50 dark:bg-neutral-100 rounded-2xl border-2 border-border">
                         <span className="font-black text-foreground block mb-1 uppercase tracking-wider text-[9px]">Notes:</span>
                         {selectedQuoteForPrint.notes}
                       </div>
@@ -679,12 +679,12 @@ export default function DevisView({
                 <div className="grid grid-cols-2 gap-4 mt-12 pt-8 border-t-2 border-dashed border-border text-center text-[10px]">
                   <div>
                     <p className="text-muted font-black font-mono uppercase tracking-wider text-[9px]">LE CLIENT (Pour accord)</p>
-                    <div className="h-16 mt-2 border-2 border-dashed border-border rounded-2xl bg-neutral-50/30 dark:bg-neutral-800/30"></div>
+                    <div className="h-16 mt-2 border-2 border-dashed border-border rounded-2xl bg-neutral-50/30 dark:bg-neutral-100/30"></div>
                     <p className="text-muted mt-1.5 italic font-semibold">Signature précédée de la mention "Lu et approuvé"</p>
                   </div>
                   <div>
                     <p className="text-muted font-black font-mono uppercase tracking-wider text-[9px]">LA DIRECTION (Quincaillerie)</p>
-                    <div className="h-16 mt-2 border-2 border-dashed border-border rounded-2xl bg-neutral-50/30 dark:bg-neutral-800/30"></div>
+                    <div className="h-16 mt-2 border-2 border-dashed border-border rounded-2xl bg-neutral-50/30 dark:bg-neutral-100/30"></div>
                     <p className="text-muted mt-1.5 italic font-semibold">Cachet et signature du gérant</p>
                   </div>
                 </div>
@@ -702,7 +702,7 @@ export default function DevisView({
         icon={DollarSign}
         size="md"
       >
-        <form onSubmit={handleConvertSubmit} className="space-y-4 text-xs -m-6 p-6 bg-neutral-50/30 dark:bg-neutral-800/30">
+        <form onSubmit={handleConvertSubmit} className="space-y-4 text-xs -m-6 p-6 bg-neutral-50/30 dark:bg-neutral-100/30">
           {quoteToConvert && (
             <>
               <div className="bg-surface p-4 rounded-2xl border-2 border-border space-y-1.5">

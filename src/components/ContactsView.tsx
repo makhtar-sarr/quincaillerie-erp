@@ -161,7 +161,7 @@ export default function ContactsView({
           <h2 className="text-xl font-black font-display text-foreground uppercase tracking-wide">Annuaires Tiers</h2>
           <p className="text-xs text-muted mt-1 font-semibold">Gérez vos clients fidèles, entrepreneurs locaux, conducteurs de travaux et vos fournisseurs grossistes</p>
         </div>
-        <div className="flex bg-neutral-100 dark:bg-neutral-800 p-1 rounded-2xl mt-4 sm:mt-0 self-start sm:self-center text-xs border border-border">
+        <div className="flex bg-neutral-100 dark:bg-neutral-100 p-1 rounded-2xl mt-4 sm:mt-0 self-start sm:self-center text-xs border border-border">
           <Button
             variant="icon"
             onClick={() => { setActiveTab('customers'); setSearch(''); }}
@@ -247,7 +247,7 @@ export default function ContactsView({
                   </div>
                 </div>
 
-                <div className="space-y-2 text-muted pt-3 border-t-2 border-neutral-50 dark:border-neutral-700 font-semibold">
+                <div className="space-y-2 text-muted pt-3 border-t-2 border-neutral-50 dark:border-neutral-300 font-semibold">
                   <p className="flex items-center"><Phone className="h-4 w-4 mr-2 text-muted shrink-0" /> {cust.phone}</p>
                   {cust.email && <p className="flex items-center"><Mail className="h-4 w-4 mr-2 text-muted shrink-0" /> {cust.email}</p>}
                   {cust.address && <p className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-muted shrink-0" /> {cust.address}</p>}
@@ -299,7 +299,7 @@ export default function ContactsView({
                   </div>
                 </div>
 
-                <div className="space-y-2 text-muted pt-3 border-t-2 border-neutral-50 dark:border-neutral-700 font-semibold">
+                <div className="space-y-2 text-muted pt-3 border-t-2 border-neutral-50 dark:border-neutral-300 font-semibold">
                   <p className="flex items-center"><Phone className="h-4 w-4 mr-2 text-muted shrink-0" /> {supp.phone}</p>
                   {supp.email && <p className="flex items-center"><Mail className="h-4 w-4 mr-2 text-muted shrink-0" /> {supp.email}</p>}
                   {supp.address && <p className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-muted shrink-0" /> {supp.address}</p>}

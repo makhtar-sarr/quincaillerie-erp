@@ -14,7 +14,7 @@ const variantStyles: Record<Variant, string> = {
   primary:
     'bg-primary hover:bg-primary-hover text-white hover:scale-[1.02]',
   secondary:
-    'bg-white border-2 border-border hover:bg-neutral-50 text-foreground dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-neutral-100',
+    'bg-white border-2 border-border hover:bg-neutral-50 text-foreground dark:bg-neutral-100 dark:hover:bg-neutral-200 dark:text-neutral-800',
   danger:
     'bg-danger hover:bg-danger-hover text-white',
   success:
@@ -22,7 +22,7 @@ const variantStyles: Record<Variant, string> = {
   dark:
     'bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-100 dark:hover:bg-neutral-200 dark:text-neutral-900',
   icon:
-    'p-2 text-muted hover:text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-700 dark:hover:text-neutral-100',
+    'p-2 text-muted hover:text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-200 dark:hover:text-neutral-800',
 };
 
 const sizeStyles: Record<Size, string> = {

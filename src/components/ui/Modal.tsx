@@ -78,7 +78,7 @@ export function Modal({
     <AnimatePresence>
       {isOpen && (
         <div
-          className="fixed inset-0 bg-neutral-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-neutral-950/40 dark:bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}

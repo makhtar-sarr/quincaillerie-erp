@@ -39,7 +39,7 @@ export function Input({
           id={inputId}
           className={cn(
             'w-full rounded-xl border bg-surface px-3 py-2.5 text-foreground focus:outline-hidden focus:ring-2 min-h-[44px]',
-            'border-border focus:ring-primary dark:bg-neutral-800 dark:text-neutral-100',
+            'border-border focus:ring-primary dark:bg-neutral-100 dark:text-neutral-800',
             hasIcon && 'pl-10',
             error && 'border-danger focus:ring-danger',
             className,

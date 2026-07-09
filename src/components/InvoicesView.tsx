@@ -144,7 +144,7 @@ export default function InvoicesView({
         <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
           inv.paymentMethod === 'Wave' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400' :
           inv.paymentMethod === 'Orange Money' ? 'bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400' :
-          'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300'
+          'bg-neutral-100 dark:bg-neutral-200 text-neutral-600 dark:text-neutral-300'
         }`}>
           {inv.paymentMethod}
         </span>
@@ -336,7 +336,7 @@ export default function InvoicesView({
                 <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
                   inv.paymentMethod === 'Wave' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400' :
                   inv.paymentMethod === 'Orange Money' ? 'bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400' :
-                  'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300'
+                  'bg-neutral-100 dark:bg-neutral-200 text-neutral-600 dark:text-neutral-300'
                 }`}>
                   {inv.paymentMethod}
                 </span>
@@ -408,7 +408,7 @@ export default function InvoicesView({
                 <span className={`inline-block mt-1 px-2 py-0.5 rounded-lg text-[10px] font-black ${
                   inv.paymentMethod === 'Wave' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400' :
                   inv.paymentMethod === 'Orange Money' ? 'bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400' :
-                  'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300'
+                  'bg-neutral-100 dark:bg-neutral-200 text-neutral-600 dark:text-neutral-300'
                 }`}>
                   {inv.paymentMethod}
                 </span>
@@ -657,7 +657,7 @@ export default function InvoicesView({
             </div>
 
             {/* Financial total breakdowns */}
-            <div className="bg-neutral-50/50 dark:bg-neutral-800/50 p-5 rounded-[2rem] border-2 border-border flex flex-col justify-between">
+            <div className="bg-neutral-50/50 dark:bg-neutral-100/50 p-5 rounded-[2rem] border-2 border-border flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-muted font-semibold">
                   <span>Sous-total de la vente HT :</span>
@@ -765,7 +765,7 @@ export default function InvoicesView({
                 </div>
 
                 {/* Transaction metadata */}
-                <div className="grid grid-cols-2 gap-8 mb-6 bg-neutral-50 dark:bg-neutral-800 p-4 rounded-2xl border-2 border-border/50">
+                <div className="grid grid-cols-2 gap-8 mb-6 bg-neutral-50 dark:bg-neutral-100 p-4 rounded-2xl border-2 border-border/50">
                   <div>
                     <span className="text-[9px] text-muted block font-black uppercase tracking-wider font-mono">ACHETEUR / CLIENT</span>
                     <span className="font-black text-foreground text-xs block mt-1">{selectedInvoiceForPrint.customerName}</span>
@@ -796,7 +796,7 @@ export default function InvoicesView({
                 {/* Wave QR Code simulation if Wave or OM is chosen to look incredibly authentic! */}
                 {(selectedInvoiceForPrint.paymentMethod === 'Wave' || selectedInvoiceForPrint.paymentMethod === 'Orange Money') && (
                   <div className="mb-6 p-4 border-2 border-blue-100 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/20 rounded-2xl flex items-center space-x-4">
-                    <div className="bg-surface dark:bg-neutral-800 p-1.5 rounded-xl border-2 border-blue-100 dark:border-blue-800 shadow-xs shrink-0">
+                    <div className="bg-surface dark:bg-neutral-100 p-1.5 rounded-xl border-2 border-blue-100 dark:border-blue-800 shadow-xs shrink-0">
                       <QrCode className="h-10 w-10 text-blue-700 dark:text-blue-400" />
                     </div>
                     <div>
@@ -833,7 +833,7 @@ export default function InvoicesView({
                 <div className="flex justify-between items-start border-t-2 border-border pt-5">
                   <div className="max-w-xs text-[10px] text-muted font-semibold leading-relaxed">
                     {selectedInvoiceForPrint.notes && (
-                      <div className="text-muted font-medium not-italic mt-2 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-2xl border-2 border-border">
+                      <div className="text-muted font-medium not-italic mt-2 p-3 bg-neutral-50 dark:bg-neutral-100 rounded-2xl border-2 border-border">
                         <span className="font-black text-foreground block mb-1 uppercase tracking-wider text-[9px]">Commentaires:</span>
                         {selectedInvoiceForPrint.notes}
                       </div>
@@ -876,11 +876,11 @@ export default function InvoicesView({
                 <div className="grid grid-cols-2 gap-4 mt-12 pt-8 border-t-2 border-dashed border-border text-center text-[10px]">
                   <div>
                     <p className="text-muted font-black font-mono uppercase tracking-wider text-[9px]">SIGNATURE CLIENT (Accusé réception)</p>
-                    <div className="h-16 mt-2 border-2 border-dashed border-border rounded-2xl bg-neutral-50/30 dark:bg-neutral-800/30"></div>
+                    <div className="h-16 mt-2 border-2 border-dashed border-border rounded-2xl bg-neutral-50/30 dark:bg-neutral-100/30"></div>
                   </div>
                   <div>
                     <p className="text-muted font-black font-mono uppercase tracking-wider text-[9px]">LA CAISSE (Quincaillerie)</p>
-                    <div className="h-16 mt-2 border-2 border-dashed border-border rounded-2xl bg-neutral-50/30 dark:bg-neutral-800/30"></div>
+                    <div className="h-16 mt-2 border-2 border-dashed border-border rounded-2xl bg-neutral-50/30 dark:bg-neutral-100/30"></div>
                     <p className="text-muted mt-1.5 italic font-semibold">Facture acquittée sous réserve de provision</p>
                   </div>
                 </div>

@@ -354,7 +354,7 @@ export default function ItemsView({
                     </div>
                   ),
                   category: (
-                    <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-neutral-100 dark:bg-neutral-700 text-foreground">
+                    <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-neutral-100 dark:bg-neutral-200 text-foreground">
                       {item.category}
                     </span>
                   ),
@@ -446,8 +446,8 @@ export default function ItemsView({
                     </span>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-neutral-100 dark:bg-neutral-700 text-muted">{item.category}</span>
-                    <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-neutral-100 dark:bg-neutral-700 text-muted">{item.unit}</span>
+                    <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-neutral-100 dark:bg-neutral-200 text-muted">{item.category}</span>
+                    <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-neutral-100 dark:bg-neutral-200 text-muted">{item.unit}</span>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div>
@@ -588,7 +588,7 @@ export default function ItemsView({
                 placeholder="e.g. SOC-CPJ-42.5"
                 value={newItemRef}
                 onChange={(e) => setNewItemRef(e.target.value.toUpperCase())}
-                className="w-full border border-border p-2.5 rounded-xl font-mono focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                className="w-full border border-border p-2.5 rounded-xl font-mono focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30"
                 required
               />
             </div>
@@ -613,7 +613,7 @@ export default function ItemsView({
               placeholder="e.g. Ciment SOCOCIM CPJ 42.5 (Sac 50kg)"
               value={newItemName}
               onChange={(e) => setNewItemName(e.target.value)}
-              className="w-full border border-border p-2.5 rounded-xl focus:ring-2 focus:ring-primary focus:outline-hidden font-bold bg-neutral-50/50"
+              className="w-full border border-border p-2.5 rounded-xl focus:ring-2 focus:ring-primary focus:outline-hidden font-bold bg-neutral-50/50 dark:bg-neutral-200/30"
               required
             />
           </div>
@@ -626,7 +626,7 @@ export default function ItemsView({
                 placeholder="Sac, Barre, Litre, etc."
                 value={newItemUnit}
                 onChange={(e) => setNewItemUnit(e.target.value)}
-                className="w-full border border-border p-2.5 rounded-xl focus:ring-2 focus:ring-primary focus:outline-hidden font-bold bg-neutral-50/50"
+                className="w-full border border-border p-2.5 rounded-xl focus:ring-2 focus:ring-primary focus:outline-hidden font-bold bg-neutral-50/50 dark:bg-neutral-200/30"
               />
             </div>
             <div>
@@ -635,7 +635,7 @@ export default function ItemsView({
                 type="number"
                 value={newItemMinStock}
                 onChange={(e) => setNewItemMinStock(Number(e.target.value))}
-                className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30"
                 required
               />
             </div>
@@ -645,7 +645,7 @@ export default function ItemsView({
                 type="number"
                 value={newItemInitialQty}
                 onChange={(e) => setNewItemInitialQty(Number(e.target.value))}
-                className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30"
               />
             </div>
           </div>
@@ -657,7 +657,7 @@ export default function ItemsView({
                 type="number"
                 value={newItemBuying}
                 onChange={(e) => setNewItemBuying(Number(e.target.value))}
-                className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 text-foreground"
+                className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30 text-foreground"
                 required
               />
             </div>
@@ -667,7 +667,7 @@ export default function ItemsView({
                 type="number"
                 value={newItemSelling}
                 onChange={(e) => setNewItemSelling(Number(e.target.value))}
-                className="w-full border border-border p-2.5 rounded-xl font-mono font-black focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 text-foreground"
+                className="w-full border border-border p-2.5 rounded-xl font-mono font-black focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30 text-foreground"
                 required
               />
             </div>
@@ -679,7 +679,7 @@ export default function ItemsView({
               placeholder="Détails additionnels du produit..."
               value={newItemDesc}
               onChange={(e) => setNewItemDesc(e.target.value)}
-              className="w-full border border-border p-2.5 rounded-xl h-20 focus:ring-2 focus:ring-primary focus:outline-hidden font-medium bg-neutral-50/50"
+              className="w-full border border-border p-2.5 rounded-xl h-20 focus:ring-2 focus:ring-primary focus:outline-hidden font-medium bg-neutral-50/50 dark:bg-neutral-200/30"
             />
           </div>
 
@@ -690,7 +690,7 @@ export default function ItemsView({
                 type="text"
                 value={operatorName}
                 onChange={(e) => setOperatorName(e.target.value)}
-                className="w-full bg-neutral-50 border border-border p-2.5 rounded-xl font-bold text-foreground focus:outline-hidden"
+                className="w-full bg-neutral-50 dark:bg-neutral-200 border border-border p-2.5 rounded-xl font-bold text-foreground focus:outline-hidden"
               />
             </div>
           </div>
@@ -719,7 +719,7 @@ export default function ItemsView({
         <form id="adjust-stock-form" onSubmit={handleAdjustSubmit} className="space-y-4 text-xs">
           {selectedItem && (
             <>
-              <div className="bg-neutral-50 p-4 rounded-2xl border-2 border-border/50">
+              <div className="bg-neutral-50 dark:bg-neutral-200 p-4 rounded-2xl border-2 border-border/50">
                 <span className="text-[10px] text-muted block font-black uppercase tracking-wider">Article Sélectionné</span>
                 <span className="font-black text-foreground text-xs block mt-1">{selectedItem.name}</span>
                 <span className="text-[11px] font-bold text-foreground block mt-1.5">
@@ -735,7 +735,7 @@ export default function ItemsView({
                     min="1"
                     value={adjustQty}
                     onChange={(e) => setAdjustQty(Math.max(1, Number(e.target.value)))}
-                    className="w-full border border-border p-2.5 rounded-xl font-mono font-black focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                    className="w-full border border-border p-2.5 rounded-xl font-mono font-black focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30"
                     required
                   />
                 </div>
@@ -770,7 +770,7 @@ export default function ItemsView({
                     placeholder="e.g. BON-ACHAT-412"
                     value={adjustRefCode}
                     onChange={(e) => setAdjustRefCode(e.target.value.toUpperCase())}
-                    className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                    className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30"
                   />
                 </div>
                 <div>
@@ -779,7 +779,7 @@ export default function ItemsView({
                     type="text"
                     value={operatorName}
                     onChange={(e) => setOperatorName(e.target.value)}
-                    className="w-full border border-border p-2.5 rounded-xl font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                    className="w-full border border-border p-2.5 rounded-xl font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30"
                     required
                   />
                 </div>
@@ -816,7 +816,7 @@ export default function ItemsView({
                   type="text"
                   value={editingItem.ref}
                   onChange={(e) => setEditingItem({ ...editingItem, ref: e.target.value.toUpperCase() })}
-                  className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                  className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30"
                   required
                 />
               </div>
@@ -840,7 +840,7 @@ export default function ItemsView({
                 type="text"
                 value={editingItem.name}
                 onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
-                className="w-full border border-border p-2.5 rounded-xl focus:ring-2 focus:ring-primary focus:outline-hidden font-bold bg-neutral-50/50"
+                className="w-full border border-border p-2.5 rounded-xl focus:ring-2 focus:ring-primary focus:outline-hidden font-bold bg-neutral-50/50 dark:bg-neutral-200/30"
                 required
               />
             </div>
@@ -852,7 +852,7 @@ export default function ItemsView({
                   type="text"
                   value={editingItem.unit}
                   onChange={(e) => setEditingItem({ ...editingItem, unit: e.target.value })}
-                  className="w-full border border-border p-2.5 rounded-xl focus:ring-2 focus:ring-primary bg-neutral-50/50 font-semibold"
+                  className="w-full border border-border p-2.5 rounded-xl focus:ring-2 focus:ring-primary bg-neutral-50/50 dark:bg-neutral-200/30 font-semibold"
                 />
               </div>
               <div>
@@ -861,7 +861,7 @@ export default function ItemsView({
                   type="number"
                   value={editingItem.minStock}
                   onChange={(e) => setEditingItem({ ...editingItem, minStock: Number(e.target.value) })}
-                  className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                  className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30"
                   required
                 />
               </div>
@@ -874,7 +874,7 @@ export default function ItemsView({
                   type="number"
                   value={editingItem.buyingPrice}
                   onChange={(e) => setEditingItem({ ...editingItem, buyingPrice: Number(e.target.value) })}
-                  className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 text-foreground"
+                  className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30 text-foreground"
                   required
                 />
               </div>
@@ -884,7 +884,7 @@ export default function ItemsView({
                   type="number"
                   value={editingItem.sellingPrice}
                   onChange={(e) => setEditingItem({ ...editingItem, sellingPrice: Number(e.target.value) })}
-                  className="w-full border border-border p-2.5 rounded-xl font-mono font-black focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 text-foreground"
+                  className="w-full border border-border p-2.5 rounded-xl font-mono font-black focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30 text-foreground"
                   required
                 />
               </div>
@@ -895,7 +895,7 @@ export default function ItemsView({
               <textarea
                 value={editingItem.description || ''}
                 onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
-                className="w-full border border-border p-2.5 rounded-xl h-20 focus:ring-2 focus:ring-primary bg-neutral-50/50 font-medium"
+                className="w-full border border-border p-2.5 rounded-xl h-20 focus:ring-2 focus:ring-primary bg-neutral-50/50 dark:bg-neutral-200/30 font-medium"
               />
             </div>
           </form>

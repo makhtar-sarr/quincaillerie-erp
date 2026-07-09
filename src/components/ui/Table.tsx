@@ -58,7 +58,7 @@ export function Table({
               onClick={() => onRowClick?.(row, i)}
               className={cn(
                 'transition-colors',
-                onRowClick && 'cursor-pointer hover:bg-neutral-50/50 dark:hover:bg-neutral-700/50',
+                onRowClick && 'cursor-pointer hover:bg-neutral-50/50 dark:hover:bg-neutral-200/50',
               )}
             >
               {columns.map((col) => (
@@ -81,7 +81,7 @@ export function Table({
               className={cn(
                 'rounded-xl border border-border bg-surface p-4 space-y-2',
                 onRowClick && 'cursor-pointer',
-                'transition-colors hover:bg-neutral-50/50',
+                'transition-colors hover:bg-neutral-50/50 dark:hover:bg-neutral-200/50',
               )}
             >
               {columns.map((col) => (

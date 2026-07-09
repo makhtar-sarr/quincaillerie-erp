@@ -307,7 +307,7 @@ export default function SettingsView({
           </form>
 
           {/* Local storage info card */}
-          <div className="bg-neutral-100/50 dark:bg-neutral-800/50 rounded-[2rem] border-2 border-border/50 p-5 text-xs text-muted space-y-2.5 font-medium leading-relaxed">
+          <div className="bg-neutral-100/50 dark:bg-neutral-100/50 rounded-[2rem] border-2 border-border/50 p-5 text-xs text-muted space-y-2.5 font-medium leading-relaxed">
             <h4 className="font-black text-foreground uppercase tracking-wide flex items-center">
               <Info className="h-4.5 w-4.5 mr-1.5 text-blue-500 stroke-[2.5]" />
               Fonctionnement Offline & Stockage Local
@@ -354,7 +354,7 @@ export default function SettingsView({
             </AnimatePresence>
 
             {/* Local dataset summary to show what will be backed up */}
-            <div className="bg-neutral-50 dark:bg-neutral-800 p-4 rounded-2xl border border-border space-y-2">
+            <div className="bg-neutral-50 dark:bg-neutral-100 p-4 rounded-2xl border border-border space-y-2">
               <span className="font-black text-muted text-[10px] uppercase tracking-wider block">Volume des données locales actuelles :</span>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 font-bold text-foreground">
                 <div className="flex justify-between"><span>Articles en Stock:</span> <span className="font-mono font-black text-foreground">{items.length}</span></div>
@@ -426,7 +426,7 @@ export default function SettingsView({
                   onClick={loadBackupsList}
                   disabled={isFetching || !isFirebaseAvailable}
                   title="Rafraîchir"
-                  className="p-1.5 hover:text-foreground dark:hover:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-700"
+                  className="p-1.5 hover:text-foreground dark:hover:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-200"
                 >
                   <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
                 </Button>
@@ -438,7 +438,7 @@ export default function SettingsView({
                   <span>Chargement des archives...</span>
                 </div>
               ) : backups.length === 0 ? (
-                <div className="border border-dashed border-border rounded-2xl p-6 text-center text-muted italic font-mono bg-neutral-50 dark:bg-neutral-800">
+                <div className="border border-dashed border-border rounded-2xl p-6 text-center text-muted italic font-mono bg-neutral-50 dark:bg-neutral-100">
                   {isFirebaseAvailable 
                     ? "Aucune sauvegarde trouvée dans le Cloud." 
                     : "Activez Firebase pour voir l'historique."}
@@ -448,7 +448,7 @@ export default function SettingsView({
                   {backups.map((bk) => (
                     <div 
                       key={bk.id} 
-                      className="bg-neutral-50 dark:bg-neutral-800 p-3.5 rounded-2xl border border-border/60 flex items-start justify-between space-x-2 hover:bg-neutral-100/40 dark:hover:bg-neutral-700/40 transition-colors"
+                      className="bg-neutral-50 dark:bg-neutral-100 p-3.5 rounded-2xl border border-border/60 flex items-start justify-between space-x-2 hover:bg-neutral-100/40 dark:hover:bg-neutral-200/40 transition-colors"
                     >
                       <div className="space-y-1">
                         <div className="font-black text-foreground flex items-center space-x-1.5">
