@@ -53,5 +53,14 @@ service cloud.firestore {
       // Updates are forbidden for immutable backups
       allow update: if false;
     }
+
+    // Users collection
+    match /users/{userId} {
+      allow get: if isValidId(userId);
+      allow create: if isValidId(userId);
+      allow delete: if isValidId(userId);
+      allow list: if true;
+      allow update: if isValidId(userId);
+    }
   }
 }

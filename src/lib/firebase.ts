@@ -9,7 +9,8 @@ import {
   doc, 
   query, 
   orderBy, 
-  limit 
+  limit,
+  writeBatch 
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -170,6 +171,92 @@ export async function deleteBackupFromCloud(id: string): Promise<void> {
     await deleteDoc(docRef);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
+    throw error;
+  }
+}
+
+export interface CloudUser {
+  id: string;
+  name: string;
+  pinHash: string;
+  role: 'admin' | 'vendeur' | 'magasinier';
+  createdAt: string;
+}
+
+export async function saveUsersToCloud(users: CloudUser[]): Promise<void> {
+  if (!isFirebaseAvailable || !db) {
+    return;
+  }
+
+  try {
+    const usersCol = collection(db, 'users');
+    const existing = await getDocs(usersCol);
+    
+    const batch = writeBatch(db);
+    existing.forEach((userDoc) => {
+      batch.delete(userDoc.ref);
+    });
+    await batch.commit();
+    
+    for (const user of users) {
+      await addDoc(usersCol, {
+        id: user.id,
+        name: user.name,
+        pinHash: user.pinHash,
+        role: user.role,
+        createdAt: user.createdAt,
+      });
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'users');
+    throw error;
+  }
+}
+
+export async function getUsersFromCloud(): Promise<CloudUser[]> {
+  if (!isFirebaseAvailable || !db) {
+    return [];
+  }
+
+  try {
+    const usersCol = collection(db, 'users');
+    const querySnapshot = await getDocs(usersCol);
+    
+    const users: CloudUser[] = [];
+    querySnapshot.forEach((userDoc) => {
+      const data = userDoc.data();
+      users.push({
+        id: data.id,
+        name: data.name,
+        pinHash: data.pinHash,
+        role: data.role,
+        createdAt: data.createdAt,
+      });
+    });
+    
+    return users;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'users');
+    throw error;
+  }
+}
+
+export async function deleteUsersFromCloud(): Promise<void> {
+  if (!isFirebaseAvailable || !db) {
+    return;
+  }
+
+  try {
+    const usersCol = collection(db, 'users');
+    const existing = await getDocs(usersCol);
+    
+    const batch = writeBatch(db);
+    existing.forEach((userDoc) => {
+      batch.delete(userDoc.ref);
+    });
+    await batch.commit();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, 'users');
     throw error;
   }
 }
