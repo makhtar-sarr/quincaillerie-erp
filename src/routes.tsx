@@ -18,6 +18,7 @@ const DevisView = lazy(() => import('./components/DevisView'));
 const InvoicesView = lazy(() => import('./components/InvoicesView'));
 const ContactsView = lazy(() => import('./components/ContactsView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
+const LoginView = lazy(() => import('./components/LoginView'));
 
 export interface SidebarItem {
   id: string;
@@ -118,6 +119,7 @@ export default function AppRoutes({
 }: AppRoutesProps) {
   return (
     <Routes>
+      <Route path="/login" element={<LoginView />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route
         path="/dashboard"

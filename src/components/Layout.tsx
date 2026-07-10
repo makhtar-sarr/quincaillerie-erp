@@ -1,9 +1,10 @@
 import { Suspense, useState, type ReactNode } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, Navigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, MapPin, Clock, Loader2 } from 'lucide-react';
 import { StoreSettings } from '../types';
 import { sidebarItems } from '../routes';
+import { useAuth } from '@/context/AuthContext';
 
 function LoadingSpinner() {
   return (
@@ -24,6 +25,25 @@ interface LayoutProps {
 export default function Layout({ children, settings }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { isAuthenticated, loading } = useAuth();
+
+  const isLoginPage = location.pathname === '/login';
+
+  if (!isLoginPage) {
+    if (loading) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="flex flex-col items-center space-y-4">
+            <Loader2 className="h-8 w-8 text-amber-500 animate-spin" />
+            <p className="text-sm text-muted font-medium">Vérification de la session...</p>
+          </div>
+        </div>
+      );
+    }
+    if (!isAuthenticated) {
+      return <Navigate to="/login" replace />;
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row text-foreground antialiased font-sans">
