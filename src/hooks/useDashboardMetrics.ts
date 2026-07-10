@@ -35,7 +35,7 @@ export function useDashboardMetrics(
     const totalSales = invoices.reduce((acc, inv) => acc + inv.total, 0);
 
     // Sales today (mocking today as 2026-07-06 based on current system date)
-    const todayStr = '2026-07-06';
+    const todayStr = new Date().toISOString().split('T')[0];
     const salesToday = invoices
       .filter(inv => inv.date === todayStr)
       .reduce((acc, inv) => acc + inv.total, 0);
