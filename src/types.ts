@@ -87,6 +87,14 @@ export interface Invoice {
   quoteId?: string; // Reference to source quotation if applicable
 }
 
+export interface User {
+  id: string;
+  name: string;
+  pinHash: string;
+  role: 'admin' | 'vendeur' | 'magasinier';
+  createdAt: string;
+}
+
 export interface StoreSettings {
   storeName: string;
   address: string;
