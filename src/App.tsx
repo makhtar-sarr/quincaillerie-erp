@@ -3,16 +3,21 @@ import { BrowserRouter, useNavigate } from 'react-router-dom';
 import { Item, StockMovement, Customer, Supplier, Quote, Invoice, StoreSettings } from './types';
 
 import { StoreProvider, useStore } from './context/StoreContext';
+import { AuthProvider } from '@/context/AuthContext';
 import { useIdGenerator } from './hooks/useIdGenerator';
 import Layout from './components/Layout';
 import AppRoutes from './routes';
+import { Toaster } from './components/ui/Toast';
 
 export default function App() {
   return (
     <StoreProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+        <Toaster />
+      </AuthProvider>
     </StoreProvider>
   );
 }
