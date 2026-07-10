@@ -6,3 +6,12 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Sisyphus orchestration metadata
+.sisyphus/
+
+# QA screenshots
+qa-*.png
+
+# Build artifacts
+artifacts/
