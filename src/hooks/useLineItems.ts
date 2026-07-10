@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Item, LineItem } from '../types';
 import { calculateVAT } from '../utils/vat';
+import { toast } from 'sonner';
 
 interface UseLineItemsOptions {
   validateStock?: boolean;
@@ -31,7 +32,7 @@ export function useLineItems(items: Item[], options?: UseLineItemsOptions) {
     if (!item) return false;
 
     if (validateStock && tempQty > item.stockCount) {
-      alert(`Stock insuffisant ! Stock disponible : ${item.stockCount} ${item.unit}s.`);
+      toast.error(`Stock insuffisant ! Stock disponible : ${item.stockCount} ${item.unit}s.`);
       return false;
     }
 
@@ -43,7 +44,7 @@ export function useLineItems(items: Item[], options?: UseLineItemsOptions) {
         const updated = [...prev];
         const newQty = updated[existingIdx].quantity + tempQty;
         if (validateStock && newQty > item.stockCount) {
-          alert(`Stock insuffisant en cumulant ! Stock disponible : ${item.stockCount} ${item.unit}s.`);
+          toast.error(`Stock insuffisant en cumulant ! Stock disponible : ${item.stockCount} ${item.unit}s.`);
           return prev;
         }
         updated[existingIdx].quantity = newQty;

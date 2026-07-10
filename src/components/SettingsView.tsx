@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
+  Download,
   Settings, 
   Building2, 
   Phone, 
@@ -28,9 +30,13 @@ import {
 import { StoreSettings, Item, StockMovement, Customer, Supplier, Quote, Invoice } from '../types';
 import { isFirebaseAvailable } from '../lib/firebase';
 import { formatFCFA } from '../utils/data';
+import { exportToJSON } from '@/utils/export';
+import type { StoreState } from '@/context/StoreContext';
+import { toast } from 'sonner';
 import { useCloudBackups } from '../hooks/useCloudBackups';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/context/AuthContext';
 
 interface SettingsViewProps {
   settings: StoreSettings;
@@ -63,6 +69,14 @@ export default function SettingsView({
   invoices,
   onRestoreAllData
 }: SettingsViewProps) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  if (user?.role !== 'admin') {
+    navigate('/dashboard');
+    return null;
+  }
+
   // Store Settings Form state
   const [storeName, setStoreName] = useState(settings.storeName);
   const [address, setAddress] = useState(settings.address);
@@ -100,6 +114,15 @@ export default function SettingsView({
     quotes,
     invoices
   }, onRestoreAllData);
+
+  const handleExportJSON = () => {
+    if (items.length === 0 && movements.length === 0 && customers.length === 0 && suppliers.length === 0 && quotes.length === 0 && invoices.length === 0) {
+      toast.error('Aucune donnée à exporter');
+      return;
+    }
+    const state: StoreState = { settings, items, movements, customers, suppliers, quotes, invoices };
+    exportToJSON(state);
+  };
 
   return (
     <div id="settings-view-root" className="max-w-4xl mx-auto space-y-8 pb-12">
@@ -495,6 +518,26 @@ export default function SettingsView({
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Local JSON export card */}
+          <div className="bg-surface rounded-[2rem] border-2 border-border shadow-xs p-6 space-y-4">
+            <h3 className="font-black text-foreground uppercase tracking-wide flex items-center">
+              <Database className="h-5 w-5 mr-2 text-amber-500 stroke-[2.5]" />
+              Export Local
+            </h3>
+            <p className="text-muted text-xs font-semibold">
+              Téléchargez l'intégralité de vos données (paramètres, articles, clients, factures, devis...)
+              au format JSON.
+            </p>
+            <Button
+              variant="secondary"
+              onClick={handleExportJSON}
+              className="w-full font-black flex items-center justify-center space-x-2 uppercase tracking-wider text-[11px]"
+            >
+              <Download className="h-4.5 w-4.5 stroke-[2.5]" />
+              <span>Exporter JSON complet</span>
+            </Button>
           </div>
 
         </div>

@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { 
+  Download,
   Package, 
   Search, 
   Plus, 
@@ -13,11 +14,17 @@ import {
 } from 'lucide-react';
 import { Item, Category, StockMovement } from '../types';
 import { formatFCFA } from '../utils/data';
+import { exportToCSV } from '@/utils/export';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Table, type Column } from '@/components/ui/Table';
 import { cn } from '@/lib/utils';
+import { useTemporalFilter } from '@/hooks/useTemporalFilter';
+import { useAuth } from '@/context/AuthContext';
+import { importArticlesFromCSV } from '@/utils/import';
+import { useStore } from '@/context/StoreContext';
 
 interface ItemsViewProps {
   items: Item[];
@@ -36,6 +43,8 @@ export default function ItemsView({
   onDeleteItem,
   onAdjustStock
 }: ItemsViewProps) {
+  const { user } = useAuth();
+  const isVendeur = user?.role === 'vendeur';
   const [activeTab, setActiveTab] = useState<'catalog' | 'history'>('catalog');
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('Tous');
@@ -45,6 +54,7 @@ export default function ItemsView({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
   
   // Add item form state
   const [newItemName, setNewItemName] = useState('');
@@ -66,6 +76,10 @@ export default function ItemsView({
 
   // Editing state
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+
+  // CSV import
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [, dispatch] = useStore();
 
   const categories: Category[] = [
     'Ciment & Matériaux',
@@ -97,13 +111,20 @@ export default function ItemsView({
 
   // Filtering movements
   const [historySearch, setHistorySearch] = useState('');
+  const {
+    selectedMonth,
+    setSelectedMonth,
+    selectedYear,
+    setSelectedYear,
+    filterByMonth,
+  } = useTemporalFilter<StockMovement>();
   const filteredMovements = useMemo(() => {
-    return movements.filter(mov => {
+    return filterByMonth(movements).filter(mov => {
       const matchItemName = mov.itemName.toLowerCase().includes(historySearch.toLowerCase()) ||
                             mov.referenceCode.toLowerCase().includes(historySearch.toLowerCase());
       return matchItemName;
     }).sort((a, b) => b.date.localeCompare(a.date));
-  }, [movements, historySearch]);
+  }, [movements, historySearch, filterByMonth]);
 
   const catalogColumns = useMemo<Column[]>(() => [
     { key: 'ref', label: 'Code / Réf', className: 'py-3.5 px-5 text-xs' },
@@ -154,7 +175,7 @@ export default function ItemsView({
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newItemName || !newItemRef) {
-      alert("Veuillez remplir le nom et la référence de l'article");
+      toast.error("Veuillez remplir le nom et la référence de l'article");
       return;
     }
     onAddItem({
@@ -186,6 +207,71 @@ export default function ItemsView({
     if (!editingItem) return;
     onUpdateItem(editingItem);
     setEditingItem(null);
+  };
+
+  const handleExportCatalogCSV = () => {
+    if (filteredItems.length === 0) {
+      toast.error('Aucune donnée à exporter');
+      return;
+    }
+    const data = filteredItems.map(item => ({
+      'Référence': item.ref,
+      'Nom': item.name,
+      'Catégorie': item.category,
+      'Prix Achat (FCFA)': item.buyingPrice,
+      'Prix Vente (FCFA)': item.sellingPrice,
+      'Stock Actuel': item.stockCount,
+      'Stock Min': item.minStock,
+      'Unité': item.unit,
+    }));
+    exportToCSV(data, 'articles');
+  };
+
+  const handleExportMovementsCSV = () => {
+    if (filteredMovements.length === 0) {
+      toast.error('Aucune donnée à exporter');
+      return;
+    }
+    const data = filteredMovements.map(mov => ({
+      'Date': mov.date,
+      'Article': mov.itemName,
+      'Type': mov.type,
+      'Quantité': mov.quantity,
+      'Raison': mov.reason,
+      'Référence': mov.referenceCode,
+      'Opérateur': mov.operator,
+    }));
+    exportToCSV(data, 'mouvements-stock');
+  };
+
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const existingRefs = items.map(i => i.ref);
+      const result = importArticlesFromCSV(content, existingRefs);
+
+      if (result.imported > 0) {
+        dispatch({ type: 'SET_ITEMS', payload: [...items, ...result.items] });
+        toast.success(`${result.imported} article(s) importé(s) avec succès${result.skipped > 0 ? `, ${result.skipped} ignoré(s)` : ''}`);
+      } else {
+        toast.info('Aucun nouvel article importé');
+      }
+
+      if (result.errors.length > 0) {
+        toast.error(`${result.errors.length} erreur(s) détectée(s) dans le fichier CSV`);
+      }
+    };
+    reader.onerror = () => {
+      toast.error('Erreur lors de la lecture du fichier');
+    };
+    reader.readAsText(file);
+
+    // Reset input so same file can be re-selected
+    e.target.value = '';
   };
 
   const totalStockValuation = useMemo(() => {
@@ -313,15 +399,21 @@ export default function ItemsView({
             </div>
 
             <div className="flex items-center space-x-2 shrink-0">
-              <Button
-                variant="primary"
-                size="md"
-                onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center space-x-1.5"
-              >
-                <Plus className="h-4.5 w-4.5 stroke-[2.5]" />
-                <span>Nouvel Article</span>
+              <Button variant="secondary" size="sm" onClick={handleExportCatalogCSV}>
+                <Download className="w-4 h-4" />
+                <span>Exporter CSV</span>
               </Button>
+              {!isVendeur && (
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="flex items-center space-x-1.5"
+                >
+                  <Plus className="h-4.5 w-4.5 stroke-[2.5]" />
+                  <span>Nouvel Article</span>
+                </Button>
+              )}
             </div>
           </div>
 
@@ -380,40 +472,44 @@ export default function ItemsView({
                   ),
                   adjustments: (
                     <div className="flex justify-center space-x-1.5">
-                      <Button
-                        variant="icon"
-                        onClick={() => handleOpenAdjust(item, 'ENTREE')}
-                        title="Ajouter du Stock (Entrée)"
-                        className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800"
-                      >
-                        <PlusCircle className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="icon"
-                        onClick={() => handleOpenAdjust(item, 'SORTIE')}
-                        title="Diminuer du Stock (Sortie/Perte)"
-                        className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-100 dark:border-rose-800"
-                      >
-                        <MinusCircle className="h-4 w-4" />
-                      </Button>
+                      {!isVendeur && (
+                        <>
+                          <Button
+                            variant="icon"
+                            onClick={() => handleOpenAdjust(item, 'ENTREE')}
+                            title="Ajouter du Stock (Entrée)"
+                            className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800"
+                          >
+                            <PlusCircle className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="icon"
+                            onClick={() => handleOpenAdjust(item, 'SORTIE')}
+                            title="Diminuer du Stock (Sortie/Perte)"
+                            className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-100 dark:border-rose-800"
+                          >
+                            <MinusCircle className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   ),
                   actions: (
                     <div className="flex items-center justify-end space-x-1">
-                      <Button variant="icon" onClick={() => setEditingItem(item)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="icon"
-                        onClick={() => {
-                          if (confirm(`Êtes-vous sûr de vouloir supprimer l'article ${item.name} ?`)) {
-                            onDeleteItem(item.id);
-                          }
-                        }}
-                        className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {!isVendeur && (
+                        <>
+                          <Button variant="icon" onClick={() => setEditingItem(item)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="icon"
+                            onClick={() => setItemToDelete(item)}
+                            className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   ),
                 };
@@ -461,43 +557,43 @@ export default function ItemsView({
                     </div>
                   </div>
                   <div className="mt-3 flex justify-between items-center pt-3 border-t border-border">
-                    <div className="flex gap-1.5">
-                      <Button
-                        variant="icon"
-                        onClick={() => handleOpenAdjust(item, 'ENTREE')}
-                        title="Ajouter du Stock (Entrée)"
-                        className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800"
-                      >
-                        <PlusCircle className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="icon"
-                        onClick={() => handleOpenAdjust(item, 'SORTIE')}
-                        title="Diminuer du Stock (Sortie/Perte)"
-                        className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-100 dark:border-rose-800"
-                      >
-                        <MinusCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="icon"
-                        onClick={() => setEditingItem(item)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="icon"
-                        onClick={() => {
-                          if (confirm(`Êtes-vous sûr de vouloir supprimer l'article ${item.name} ?`)) {
-                            onDeleteItem(item.id);
-                          }
-                        }}
-                        className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {!isVendeur && (
+                      <>
+                        <div className="flex gap-1.5">
+                          <Button
+                            variant="icon"
+                            onClick={() => handleOpenAdjust(item, 'ENTREE')}
+                            title="Ajouter du Stock (Entrée)"
+                            className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800"
+                          >
+                            <PlusCircle className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="icon"
+                            onClick={() => handleOpenAdjust(item, 'SORTIE')}
+                            title="Diminuer du Stock (Sortie/Perte)"
+                            className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-100 dark:border-rose-800"
+                          >
+                            <MinusCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="icon"
+                            onClick={() => setEditingItem(item)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="icon"
+                            onClick={() => setItemToDelete(item)}
+                            className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -514,14 +610,51 @@ export default function ItemsView({
         <div className="bg-surface p-6 rounded-[2rem] border-2 border-border/80 shadow-[0_10px_40px_rgb(0,0,0,0.015)] space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <h3 className="text-sm font-black text-foreground font-display uppercase tracking-wider">Registre des Mouvements physiques (Entrées / Sorties)</h3>
-            <Input
-              variant="search"
-              icon={<Search className="h-4 w-4" />}
-              placeholder="Filtrer par article ou référence..."
-              value={historySearch}
-              onChange={(e) => setHistorySearch(e.target.value)}
-              className="w-full sm:w-64 rounded-2xl bg-neutral-50/50 text-xs"
-            />
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={handleExportMovementsCSV}>
+                <Download className="w-4 h-4" />
+                <span>Exporter CSV</span>
+              </Button>
+              {/* Month selector */}
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                className="py-2 px-3 border border-border rounded-2xl text-xs bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden font-semibold"
+              >
+                <option value={0}>Tous les mois</option>
+                <option value={1}>Janvier</option>
+                <option value={2}>Février</option>
+                <option value={3}>Mars</option>
+                <option value={4}>Avril</option>
+                <option value={5}>Mai</option>
+                <option value={6}>Juin</option>
+                <option value={7}>Juillet</option>
+                <option value={8}>Août</option>
+                <option value={9}>Septembre</option>
+                <option value={10}>Octobre</option>
+                <option value={11}>Novembre</option>
+                <option value={12}>Décembre</option>
+              </select>
+              {/* Year selector */}
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="py-2 px-3 border border-border rounded-2xl text-xs bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden font-semibold"
+              >
+                <option value={0}>Toutes les années</option>
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+              <Input
+                variant="search"
+                icon={<Search className="h-4 w-4" />}
+                placeholder="Filtrer par article ou référence..."
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+                className="w-full sm:w-56 rounded-2xl bg-neutral-50/50 text-xs"
+              />
+            </div>
           </div>
 
           <Table
@@ -900,6 +1033,39 @@ export default function ItemsView({
             </div>
           </form>
         )}
+      </Modal>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <Modal
+        isOpen={!!itemToDelete}
+        onClose={() => setItemToDelete(null)}
+        title="Confirmer la suppression"
+        icon={AlertTriangle}
+        size="sm"
+        variant="danger"
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button variant="secondary" onClick={() => setItemToDelete(null)}>
+              Annuler
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                if (itemToDelete) {
+                  onDeleteItem(itemToDelete.id);
+                  toast.success(`Article "${itemToDelete.name}" supprimé avec succès`);
+                  setItemToDelete(null);
+                }
+              }}
+            >
+              Supprimer
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-foreground">
+          Êtes-vous sûr de vouloir supprimer l'article <strong>{itemToDelete?.name}</strong> ? Cette action est irréversible.
+        </p>
       </Modal>
     </div>
   );

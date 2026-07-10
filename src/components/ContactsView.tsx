@@ -13,10 +13,12 @@ import {
   Truck,
   AlertTriangle
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Customer, Supplier } from '../types';
 import { formatFCFA } from '../utils/data';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { useAuth } from '@/context/AuthContext';
 
 interface ContactsViewProps {
   customers: Customer[];
@@ -41,6 +43,8 @@ export default function ContactsView({
   onUpdateSupplier,
   onDeleteSupplier
 }: ContactsViewProps) {
+  const { user } = useAuth();
+  const isMagasinier = user?.role === 'magasinier';
   const [activeTab, setActiveTab] = useState<'customers' | 'suppliers'>('customers');
   const [search, setSearch] = useState('');
 
@@ -91,7 +95,7 @@ export default function ContactsView({
   const handleAddCustSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!custName || !custPhone) {
-      alert("Veuillez renseigner le nom et le téléphone.");
+      toast.error("Veuillez renseigner le nom et le téléphone.");
       return;
     }
     onAddCustomer({
@@ -113,7 +117,7 @@ export default function ContactsView({
   const handleAddSuppSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!suppName || !suppPhone) {
-      alert("Veuillez renseigner le nom et le téléphone du fournisseur.");
+      toast.error("Veuillez renseigner le nom et le téléphone du fournisseur.");
       return;
     }
     onAddSupplier({
@@ -194,23 +198,27 @@ export default function ContactsView({
           />
         </div>
         {activeTab === 'customers' ? (
-          <Button
-            variant="primary"
-            onClick={() => setIsAddCustOpen(true)}
-            className="flex items-center space-x-2 shrink-0 font-display uppercase tracking-wider"
-          >
-            <UserPlus className="h-4.5 w-4.5 stroke-[3]" />
-            <span>Nouveau Client</span>
-          </Button>
+          !isMagasinier && (
+            <Button
+              variant="primary"
+              onClick={() => setIsAddCustOpen(true)}
+              className="flex items-center space-x-2 shrink-0 font-display uppercase tracking-wider"
+            >
+              <UserPlus className="h-4.5 w-4.5 stroke-[3]" />
+              <span>Nouveau Client</span>
+            </Button>
+          )
         ) : (
-          <Button
-            variant="dark"
-            onClick={() => setIsAddSuppOpen(true)}
-            className="flex items-center space-x-2 shrink-0 font-display uppercase tracking-wider"
-          >
-            <UserPlus className="h-4.5 w-4.5 stroke-[2.5]" />
-            <span>Nouveau Fournisseur</span>
-          </Button>
+          !isMagasinier && (
+            <Button
+              variant="dark"
+              onClick={() => setIsAddSuppOpen(true)}
+              className="flex items-center space-x-2 shrink-0 font-display uppercase tracking-wider"
+            >
+              <UserPlus className="h-4.5 w-4.5 stroke-[2.5]" />
+              <span>Nouveau Fournisseur</span>
+            </Button>
+          )
         )}
       </div>
 
@@ -231,19 +239,23 @@ export default function ContactsView({
                     )}
                   </div>
                   <div className="flex space-x-1 shrink-0">
-                    <Button
-                      variant="icon"
-                      onClick={() => setEditingCust(cust)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="icon"
-                      onClick={() => setDeletingContact({ id: cust.id, name: cust.name, type: 'customer' })}
-                      className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {!isMagasinier && (
+                      <>
+                        <Button
+                          variant="icon"
+                          onClick={() => setEditingCust(cust)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="icon"
+                          onClick={() => setDeletingContact({ id: cust.id, name: cust.name, type: 'customer' })}
+                          className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -262,7 +274,7 @@ export default function ContactsView({
                     {formatFCFA(cust.outstandingBalance)}
                   </span>
                 </div>
-                {cust.outstandingBalance > 0 && (
+                {!isMagasinier && cust.outstandingBalance > 0 && (
                   <Button
                     variant="success"
                     size="sm"
@@ -283,19 +295,23 @@ export default function ContactsView({
                 <div className="flex items-start justify-between">
                   <h3 className="font-black text-foreground text-sm font-display tracking-tight leading-snug">{supp.name}</h3>
                   <div className="flex space-x-1 shrink-0">
-                    <Button
-                      variant="icon"
-                      onClick={() => setEditingSupp(supp)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="icon"
-                      onClick={() => setDeletingContact({ id: supp.id, name: supp.name, type: 'supplier' })}
-                      className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {!isMagasinier && (
+                      <>
+                        <Button
+                          variant="icon"
+                          onClick={() => setEditingSupp(supp)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="icon"
+                          onClick={() => setDeletingContact({ id: supp.id, name: supp.name, type: 'supplier' })}
+                          className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
 

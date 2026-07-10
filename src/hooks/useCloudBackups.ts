@@ -7,6 +7,7 @@ import {
   deleteBackupFromCloud,
   CloudBackup
 } from '../lib/firebase';
+import { toast } from 'sonner';
 
 export interface CloudBackupData {
   settings: StoreSettings;
@@ -53,7 +54,7 @@ export function useCloudBackups(
       return;
     }
     if (!backupLabel.trim()) {
-      alert("Veuillez donner une description à votre sauvegarde.");
+      toast.error("Veuillez donner une description à votre sauvegarde.");
       return;
     }
 
@@ -96,7 +97,7 @@ export function useCloudBackups(
     try {
       const unpacked = backup.data;
       if (!unpacked) {
-        alert("La sauvegarde semble vide ou corrompue.");
+        toast.error("La sauvegarde semble vide ou corrompue.");
         return;
       }
 
@@ -116,7 +117,7 @@ export function useCloudBackups(
       });
     } catch (err: any) {
       console.error(err);
-      alert("Erreur critique lors du chargement des données restaurées.");
+      toast.error("Erreur critique lors du chargement des données restaurées.");
     }
   }, [data.settings, onRestoreAllData]);
 

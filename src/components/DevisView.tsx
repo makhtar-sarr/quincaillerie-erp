@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
+  Download,
   FileText, 
   Plus, 
   Search, 
@@ -22,10 +23,16 @@ import {
 } from 'lucide-react';
 import { Quote, Item, Customer } from '../types';
 import { formatFCFA } from '../utils/data';
+import { exportToCSV } from '@/utils/export';
+import { exportToPDFQuotes } from '@/utils/pdf';
 import { useQuoteForm } from '../hooks/useQuoteForm';
+import { useTemporalFilter } from '../hooks/useTemporalFilter';
+import { useStore } from '@/context/StoreContext';
 import { Modal } from './ui/Modal';
 import { Table } from './ui/Table';
 import { Button } from './ui/Button';
+import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
 interface DevisViewProps {
   quotes: Quote[];
@@ -46,11 +53,14 @@ export default function DevisView({
   onDeleteQuote,
   onConvertQuoteToInvoice
 }: DevisViewProps) {
+  const { user } = useAuth();
+  const isMagasinier = user?.role === 'magasinier';
   // UI-only state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedQuoteForPrint, setSelectedQuoteForPrint] = useState<Quote | null>(null);
   const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [quoteToConvert, setQuoteToConvert] = useState<Quote | null>(null);
+  const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
 
   // Conversion wizard state
   const [convertPaymentMethod, setConvertPaymentMethod] = useState<'Espèces' | 'Wave' | 'Orange Money' | 'Chèque' | 'Virement'>('Espèces');
@@ -77,6 +87,13 @@ export default function DevisView({
     removeLine,
     handleSaveQuote: hookSaveQuote,
   } = useQuoteForm(quotes, items, customers, onAddQuote, onUpdateQuoteStatus, onConvertQuoteToInvoice);
+
+  const { selectedMonth, setSelectedMonth, selectedYear, setSelectedYear, filterByMonth } = useTemporalFilter<Quote>();
+  const [{ settings }] = useStore();
+
+  const displayedQuotes = useMemo(() => {
+    return filterByMonth(filteredQuotes);
+  }, [filteredQuotes, filterByMonth]);
 
   const handleSaveQuote = (status: Quote['status']) => {
     if (hookSaveQuote(status)) {
@@ -108,6 +125,30 @@ export default function DevisView({
     window.print();
   };
 
+  const handleExportCSV = () => {
+    if (displayedQuotes.length === 0) {
+      toast.error('Aucune donnée à exporter');
+      return;
+    }
+    const data = displayedQuotes.map(q => ({
+      'N° Dévis': q.number,
+      'Date': q.date,
+      'Client': q.customerName,
+      'Expire le': q.expiryDate,
+      'Total Net (FCFA)': q.total,
+      'Statut': q.status,
+    }));
+    exportToCSV(data, 'devis');
+  };
+
+  const handleExportPDF = () => {
+    if (displayedQuotes.length === 0) {
+      toast.error('Aucune donnée à exporter');
+      return;
+    }
+    exportToPDFQuotes(displayedQuotes, 'devis-export.pdf', settings.storeName);
+  };
+
   // Table column definitions and data
   const quotesColumns = [
     { key: 'number', label: 'N° Dévis' },
@@ -119,7 +160,7 @@ export default function DevisView({
     { key: 'actions', label: 'Actions', className: 'text-right' },
   ];
 
-  const quotesData = filteredQuotes.map((q) => {
+  const quotesData = displayedQuotes.map((q) => {
     const totalItemsCount = q.items.reduce((sum, item) => sum + item.quantity, 0);
     return {
       number: <span className="font-mono font-black text-foreground">{q.number}</span>,
@@ -144,7 +185,7 @@ export default function DevisView({
       ),
       actions: (
         <div className="flex items-center justify-end space-x-2">
-          {q.status === 'Envoyé' && (
+          {!isMagasinier && q.status === 'Envoyé' && (
             <Button
               variant="icon"
               onClick={() => onUpdateQuoteStatus(q.id, 'Accepté')}
@@ -154,7 +195,7 @@ export default function DevisView({
               <Check className="h-4.5 w-4.5 stroke-[2.5]" />
             </Button>
           )}
-          {q.status === 'Accepté' && (
+          {!isMagasinier && q.status === 'Accepté' && (
             <Button
               variant="success"
               size="sm"
@@ -172,17 +213,15 @@ export default function DevisView({
           >
             <Printer className="h-4.5 w-4.5 stroke-[2]" />
           </Button>
-          <Button
-            variant="icon"
-            onClick={() => {
-              if (confirm("Supprimer ce dévis ?")) {
-                onDeleteQuote(q.id);
-              }
-            }}
-            className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-          >
-            <Trash2 className="h-4.5 w-4.5 stroke-[2]" />
-          </Button>
+          {!isMagasinier && (
+            <Button
+              variant="icon"
+              onClick={() => setQuoteToDelete(q)}
+              className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+            >
+              <Trash2 className="h-4.5 w-4.5 stroke-[2]" />
+            </Button>
+          )}
         </div>
       ),
     };
@@ -257,15 +296,17 @@ export default function DevisView({
           <h2 className="text-xl font-black font-display text-foreground uppercase tracking-wide">Dévis & Proformas</h2>
           <p className="text-xs text-muted mt-1 font-semibold">Créez des propositions tarifaires détaillées et convertissez-les en factures de vente d'un clic</p>
         </div>
-        <Button
-          variant="primary"
-          size="lg"
-          onClick={() => setIsCreateOpen(true)}
-          className="flex items-center space-x-2 mt-4 sm:mt-0 self-start uppercase tracking-wider font-display font-black"
-        >
-          <Plus className="h-4.5 w-4.5 stroke-[3]" />
-          <span>Faire un Dévis</span>
-        </Button>
+        {!isMagasinier && (
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={() => setIsCreateOpen(true)}
+            className="flex items-center space-x-2 mt-4 sm:mt-0 self-start uppercase tracking-wider font-display font-black"
+          >
+            <Plus className="h-4.5 w-4.5 stroke-[3]" />
+            <span>Faire un Dévis</span>
+          </Button>
+        )}
       </div>
 
       {/* Search and filter bar */}
@@ -294,6 +335,54 @@ export default function DevisView({
             <option value="Expiré">Expiré</option>
           </select>
         </div>
+        <div className="flex items-center space-x-2 shrink-0">
+          <span className="text-[10px] text-muted font-black uppercase tracking-wider font-mono">Mois:</span>
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            className="py-3 pl-3 pr-8 border border-border rounded-xl text-xs font-bold bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden"
+          >
+            <option value={0}>Tous</option>
+            <option value={1}>Janvier</option>
+            <option value={2}>Février</option>
+            <option value={3}>Mars</option>
+            <option value={4}>Avril</option>
+            <option value={5}>Mai</option>
+            <option value={6}>Juin</option>
+            <option value={7}>Juillet</option>
+            <option value={8}>Août</option>
+            <option value={9}>Septembre</option>
+            <option value={10}>Octobre</option>
+            <option value={11}>Novembre</option>
+            <option value={12}>Décembre</option>
+          </select>
+        </div>
+        <div className="flex items-center space-x-2 shrink-0">
+          <span className="text-[10px] text-muted font-black uppercase tracking-wider font-mono">Année:</span>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="py-3 pl-3 pr-8 border border-border rounded-xl text-xs font-bold bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden"
+          >
+            <option value={0}>Tous</option>
+            <option value={2024}>2024</option>
+            <option value={2025}>2025</option>
+            <option value={2026}>2026</option>
+            <option value={2027}>2027</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Export buttons */}
+      <div className="flex justify-end gap-2">
+        <Button variant="secondary" size="sm" onClick={handleExportCSV}>
+          <Download className="w-4 h-4" />
+          <span>Exporter CSV</span>
+        </Button>
+        <Button variant="secondary" size="sm" onClick={handleExportPDF}>
+          <Download className="w-4 h-4" />
+          <span>Exporter PDF</span>
+        </Button>
       </div>
 
       {/* Devis List Table - Desktop */}
@@ -307,7 +396,7 @@ export default function DevisView({
 
       {/* Mobile Cards */}
       <div className="md:hidden space-y-3">
-        {filteredQuotes.map((q) => {
+        {displayedQuotes.map((q) => {
           const totalItemsCount = q.items.reduce((sum, item) => sum + item.quantity, 0);
 
           return (
@@ -336,7 +425,7 @@ export default function DevisView({
                   <p className="font-mono font-bold text-foreground">{formatFCFA(q.total)}</p>
                 </div>
                 <div className="flex gap-1.5">
-                  {q.status === 'Envoyé' && (
+                  {!isMagasinier && q.status === 'Envoyé' && (
                     <Button
                       variant="icon"
                       onClick={() => onUpdateQuoteStatus(q.id, 'Accepté')}
@@ -346,7 +435,7 @@ export default function DevisView({
                       <Check className="h-4.5 w-4.5 stroke-[2.5]" />
                     </Button>
                   )}
-                  {q.status === 'Accepté' && (
+                  {!isMagasinier && q.status === 'Accepté' && (
                     <Button
                       variant="success"
                       size="sm"
@@ -364,23 +453,21 @@ export default function DevisView({
                   >
                     <Printer className="h-4.5 w-4.5 stroke-[2]" />
                   </Button>
-                  <Button
-                    variant="icon"
-                    onClick={() => {
-                      if (confirm("Supprimer ce dévis ?")) {
-                        onDeleteQuote(q.id);
-                      }
-                    }}
-                    className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                  >
-                    <Trash2 className="h-4.5 w-4.5 stroke-[2]" />
-                  </Button>
+                  {!isMagasinier && (
+                    <Button
+                      variant="icon"
+                      onClick={() => setQuoteToDelete(q)}
+                      className="hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                    >
+                      <Trash2 className="h-4.5 w-4.5 stroke-[2]" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
           );
         })}
-        {filteredQuotes.length === 0 && (
+        {displayedQuotes.length === 0 && (
           <div className="py-16 text-center text-muted font-mono italic bg-surface rounded-xl border border-dashed border-border">
             Aucun devis enregistré ou correspondant à la recherche.
           </div>
@@ -778,6 +865,39 @@ export default function DevisView({
             </>
           )}
         </form>
+      </Modal>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <Modal
+        isOpen={!!quoteToDelete}
+        onClose={() => setQuoteToDelete(null)}
+        title="Confirmer la suppression"
+        icon={AlertTriangle}
+        size="sm"
+        variant="danger"
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button variant="secondary" onClick={() => setQuoteToDelete(null)}>
+              Annuler
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                if (quoteToDelete) {
+                  onDeleteQuote(quoteToDelete.id);
+                  toast.success("Dévis supprimé avec succès");
+                  setQuoteToDelete(null);
+                }
+              }}
+            >
+              Supprimer
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-foreground">
+          Êtes-vous sûr de vouloir supprimer le dévis <strong>{quoteToDelete?.number}</strong> ? Cette action est irréversible.
+        </p>
       </Modal>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Item, Customer, Invoice, LineItem } from '../types';
 import { useLineItems } from './useLineItems';
+import { toast } from 'sonner';
 
 export interface UseInvoiceFormReturn {
   /** Line items in the invoice */
@@ -99,11 +100,11 @@ export function useInvoiceForm(
 
   const handleSaveInvoice = useCallback((): boolean => {
     if (!customerId) {
-      alert('Veuillez choisir un client.');
+      toast.error('Veuillez choisir un client.');
       return false;
     }
     if (lines.length === 0) {
-      alert('Veuillez ajouter des articles avant de valider la vente.');
+      toast.error('Veuillez ajouter des articles avant de valider la vente.');
       return false;
     }
 

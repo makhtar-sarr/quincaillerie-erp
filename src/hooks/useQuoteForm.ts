@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Item, Customer, Quote, LineItem } from '../types';
 import { useLineItems } from './useLineItems';
+import { toast } from 'sonner';
 
 export interface UseQuoteFormReturn {
   /** Search query for filtering quotes */
@@ -146,11 +147,11 @@ export function useQuoteForm(
   const handleSaveQuote = useCallback(
     (status: Quote['status']): boolean => {
       if (!customerId) {
-        alert('Veuillez sélectionner un client.');
+        toast.error('Veuillez sélectionner un client.');
         return false;
       }
       if (lines.length === 0) {
-        alert("Veuillez ajouter au moins un article.");
+        toast.error("Veuillez ajouter au moins un article.");
         return false;
       }
 

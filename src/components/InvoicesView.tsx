@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
+  Download,
   FileSpreadsheet, 
   FileText,
   Plus, 
@@ -19,10 +20,16 @@ import {
 } from 'lucide-react';
 import { Invoice, Item, Customer } from '../types';
 import { formatFCFA } from '../utils/data';
+import { exportToCSV } from '@/utils/export';
+import { exportToPDFInvoices } from '@/utils/pdf';
 import { useInvoiceForm } from '../hooks/useInvoiceForm';
+import { useTemporalFilter } from '../hooks/useTemporalFilter';
+import { useStore } from '@/context/StoreContext';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Table } from './ui/Table';
+import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
 interface InvoicesViewProps {
   invoices: Invoice[];
@@ -67,9 +74,14 @@ export default function InvoicesView({
   onAddInvoice,
   onDeleteInvoice
 }: InvoicesViewProps) {
+  const { user } = useAuth();
+  const isMagasinier = user?.role === 'magasinier';
   const [search, setSearch] = useState('');
   const [methodFilter, setMethodFilter] = useState<string>('Tous');
   const [statusFilter, setStatusFilter] = useState<string>('Tous');
+
+  const { selectedMonth, setSelectedMonth, selectedYear, setSelectedYear, filterByMonth } = useTemporalFilter<Invoice>();
+  const [{ settings }] = useStore();
 
   // Modal control states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -111,17 +123,43 @@ export default function InvoicesView({
 
   // Filter invoices list
   const filteredInvoices = useMemo(() => {
-    return invoices.filter(inv => {
+    return filterByMonth(invoices).filter(inv => {
       const matchSearch = inv.number.toLowerCase().includes(search.toLowerCase()) ||
                           inv.customerName.toLowerCase().includes(search.toLowerCase());
       const matchMethod = methodFilter === 'Tous' || inv.paymentMethod === methodFilter;
       const matchStatus = statusFilter === 'Tous' || inv.status === statusFilter;
       return matchSearch && matchMethod && matchStatus;
     }).sort((a, b) => b.number.localeCompare(a.number));
-  }, [invoices, search, methodFilter, statusFilter]);
+  }, [invoices, search, methodFilter, statusFilter, filterByMonth]);
 
   const printInvoice = () => {
     window.print();
+  };
+
+  const handleExportCSV = () => {
+    if (filteredInvoices.length === 0) {
+      toast.error('Aucune donnée à exporter');
+      return;
+    }
+    const data = filteredInvoices.map(inv => ({
+      'N° Facture': inv.number,
+      'Date': inv.date,
+      'Client': inv.customerName,
+      'Mode de Paiement': inv.paymentMethod,
+      'Net Facturé (FCFA)': inv.total,
+      'Montant Encaissé (FCFA)': inv.amountPaid,
+      'Statut': inv.status,
+      'Notes': inv.notes || '',
+    }));
+    exportToCSV(data, 'factures');
+  };
+
+  const handleExportPDF = () => {
+    if (filteredInvoices.length === 0) {
+      toast.error('Aucune donnée à exporter');
+      return;
+    }
+    exportToPDFInvoices(filteredInvoices, 'factures-export.pdf', settings.storeName);
   };
 
   // Quick statistics
@@ -175,14 +213,16 @@ export default function InvoicesView({
           >
             <Printer className="h-4 w-4" />
           </Button>
-          <Button
-            variant="icon"
-            onClick={() => setDeleteTarget(inv)}
-            title="Supprimer la facture"
-            className="p-1.5 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {!isMagasinier && (
+            <Button
+              variant="icon"
+              onClick={() => setDeleteTarget(inv)}
+              title="Supprimer la facture"
+              className="p-1.5 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       ),
     };
@@ -241,14 +281,16 @@ export default function InvoicesView({
           <h2 className="text-xl font-black font-display text-foreground uppercase tracking-wider">Ventes & Factures</h2>
           <p className="text-xs text-muted mt-1.5 font-medium">Enregistrez des ventes au comptoir, encaissez par Wave, Orange Money ou Espèces et générez des factures acquittées</p>
         </div>
-        <Button
-          variant="primary"
-          onClick={() => setIsCreateOpen(true)}
-          className="mt-4 sm:mt-0 self-start"
-        >
-          <Plus className="h-4 w-4 stroke-[2.5]" />
-          <span>Nouvelle Vente</span>
-        </Button>
+        {!isMagasinier && (
+          <Button
+            variant="primary"
+            onClick={() => setIsCreateOpen(true)}
+            className="mt-4 sm:mt-0 self-start"
+          >
+            <Plus className="h-4 w-4 stroke-[2.5]" />
+            <span>Nouvelle Vente</span>
+          </Button>
+        )}
       </div>
 
       {/* Quick Cashier Stats Box */}
@@ -311,6 +353,54 @@ export default function InvoicesView({
             <option value="Non Payé">Non Payé</option>
           </select>
         </div>
+        <div className="flex items-center space-x-2">
+          <span className="text-muted font-bold uppercase tracking-wider text-[10px]">Mois:</span>
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            className="py-2 px-3 border border-border rounded-2xl bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden font-bold"
+          >
+            <option value={0}>Tous</option>
+            <option value={1}>Janvier</option>
+            <option value={2}>Février</option>
+            <option value={3}>Mars</option>
+            <option value={4}>Avril</option>
+            <option value={5}>Mai</option>
+            <option value={6}>Juin</option>
+            <option value={7}>Juillet</option>
+            <option value={8}>Août</option>
+            <option value={9}>Septembre</option>
+            <option value={10}>Octobre</option>
+            <option value={11}>Novembre</option>
+            <option value={12}>Décembre</option>
+          </select>
+        </div>
+        <div className="flex items-center space-x-2">
+          <span className="text-muted font-bold uppercase tracking-wider text-[10px]">Année:</span>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="py-2 px-3 border border-border rounded-2xl bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden font-bold"
+          >
+            <option value={0}>Tous</option>
+            <option value={2024}>2024</option>
+            <option value={2025}>2025</option>
+            <option value={2026}>2026</option>
+            <option value={2027}>2027</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Export buttons */}
+      <div className="flex justify-end gap-2">
+        <Button variant="secondary" size="sm" onClick={handleExportCSV}>
+          <Download className="w-4 h-4" />
+          <span>Exporter CSV</span>
+        </Button>
+        <Button variant="secondary" size="sm" onClick={handleExportPDF}>
+          <Download className="w-4 h-4" />
+          <span>Exporter PDF</span>
+        </Button>
       </div>
 
       {/* Invoices List Table - Desktop */}
@@ -367,14 +457,16 @@ export default function InvoicesView({
                   >
                     <Printer className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="icon"
-                    onClick={() => setDeleteTarget(inv)}
-                    title="Supprimer la facture"
-                    className="p-1.5 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {!isMagasinier && (
+                    <Button
+                      variant="icon"
+                      onClick={() => setDeleteTarget(inv)}
+                      title="Supprimer la facture"
+                      className="p-1.5 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               ),
             };
@@ -435,14 +527,16 @@ export default function InvoicesView({
                 >
                   <Printer className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="icon"
-                  onClick={() => setDeleteTarget(inv)}
-                  title="Supprimer la facture"
-                  className="p-1.5 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {!isMagasinier && (
+                  <Button
+                    variant="icon"
+                    onClick={() => setDeleteTarget(inv)}
+                    title="Supprimer la facture"
+                    className="p-1.5 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           );
