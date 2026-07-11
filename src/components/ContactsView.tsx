@@ -1,4 +1,8 @@
 import React, { useState, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { customerSchema, supplierSchema } from '@/schemas';
 import { 
   Users, 
   UserPlus, 
@@ -16,9 +20,23 @@ import {
 import { toast } from 'sonner';
 import { Customer, Supplier } from '../types';
 import { formatFCFA } from '../utils/data';
+import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
+
+// Form schemas derived from base schemas (omitting auto-generated fields)
+const customerFormSchema = customerSchema
+  .omit({ id: true, outstandingBalance: true })
+  .extend({
+    email: z.string().email({ message: 'Email invalide' }).or(z.literal('')),
+  });
+
+const supplierFormSchema = supplierSchema
+  .omit({ id: true, balance: true })
+  .extend({
+    email: z.string().email({ message: 'Email invalide' }).or(z.literal('')),
+  });
 
 interface ContactsViewProps {
   customers: Customer[];
@@ -62,17 +80,19 @@ export default function ContactsView({
   // Delete confirmation state
   const [deletingContact, setDeletingContact] = useState<{ id: string; name: string; type: 'customer' | 'supplier' } | null>(null);
 
-  // Forms states
-  const [custName, setCustName] = useState('');
-  const [custPhone, setCustPhone] = useState('');
-  const [custEmail, setCustEmail] = useState('');
-  const [custAddress, setCustAddress] = useState('');
-  const [custCompany, setCustCompany] = useState('');
+  // Forms states (react-hook-form + Zod)
+  type CustomerFormData = z.infer<typeof customerFormSchema>;
+  type SupplierFormData = z.infer<typeof supplierFormSchema>;
 
-  const [suppName, setSuppName] = useState('');
-  const [suppPhone, setSuppPhone] = useState('');
-  const [suppEmail, setSuppEmail] = useState('');
-  const [suppAddress, setSuppAddress] = useState('');
+  const custForm = useForm<CustomerFormData>({
+    resolver: zodResolver(customerFormSchema),
+    defaultValues: { name: '', phone: '', email: '', address: '', company: '' },
+  });
+
+  const suppForm = useForm<SupplierFormData>({
+    resolver: zodResolver(supplierFormSchema),
+    defaultValues: { name: '', phone: '', email: '', address: '' },
+  });
 
   // Filter lists
   const filteredCustomers = useMemo(() => {
@@ -92,44 +112,28 @@ export default function ContactsView({
     });
   }, [suppliers, search]);
 
-  const handleAddCustSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!custName || !custPhone) {
-      toast.error("Veuillez renseigner le nom et le téléphone.");
-      return;
-    }
+  const onCustFormSubmit = (data: CustomerFormData) => {
     onAddCustomer({
-      name: custName,
-      phone: custPhone,
-      email: custEmail || undefined,
-      address: custAddress || undefined,
-      company: custCompany || undefined
+      name: data.name,
+      phone: data.phone,
+      email: data.email || undefined,
+      address: data.address || undefined,
+      company: data.company || undefined,
     });
-    // reset
-    setCustName('');
-    setCustPhone('');
-    setCustEmail('');
-    setCustAddress('');
-    setCustCompany('');
+    toast.success('Client ajouté avec succès');
+    custForm.reset();
     setIsAddCustOpen(false);
   };
 
-  const handleAddSuppSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!suppName || !suppPhone) {
-      toast.error("Veuillez renseigner le nom et le téléphone du fournisseur.");
-      return;
-    }
+  const onSuppFormSubmit = (data: SupplierFormData) => {
     onAddSupplier({
-      name: suppName,
-      phone: suppPhone,
-      email: suppEmail || undefined,
-      address: suppAddress || undefined
+      name: data.name,
+      phone: data.phone,
+      email: data.email || undefined,
+      address: data.address || undefined,
     });
-    setSuppName('');
-    setSuppPhone('');
-    setSuppEmail('');
-    setSuppAddress('');
+    toast.success('Fournisseur ajouté avec succès');
+    suppForm.reset();
     setIsAddSuppOpen(false);
   };
 
@@ -342,13 +346,13 @@ export default function ContactsView({
       {/* MODAL: ADD CUSTOMER */}
       <Modal
         isOpen={isAddCustOpen}
-        onClose={() => setIsAddCustOpen(false)}
+        onClose={() => { custForm.reset(); setIsAddCustOpen(false); }}
         title="Nouveau Client"
         icon={UserPlus}
         size="md"
         footer={
           <div className="flex justify-end space-x-2">
-            <Button variant="secondary" type="button" onClick={() => setIsAddCustOpen(false)}>
+            <Button variant="secondary" type="button" onClick={() => { custForm.reset(); setIsAddCustOpen(false); }}>
               Annuler
             </Button>
             <Button variant="primary" type="submit" form="add-cust-form">
@@ -357,77 +361,59 @@ export default function ContactsView({
           </div>
         }
       >
-        <form id="add-cust-form" onSubmit={handleAddCustSubmit} className="space-y-4 text-xs">
-          <div>
-            <label className="block text-muted font-bold mb-1">Prénom & Nom du Client *</label>
-            <input
-              type="text"
-              placeholder="e.g. El Hadji Malick Sall"
-              value={custName}
-              onChange={(e) => setCustName(e.target.value)}
-              className="w-full border border-border p-2.5 rounded-xl font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
-              required
-            />
-          </div>
+        <form id="add-cust-form" onSubmit={custForm.handleSubmit(onCustFormSubmit)} className="space-y-4 text-xs">
+          <Input
+            label="Prénom & Nom du Client *"
+            placeholder="e.g. El Hadji Malick Sall"
+            error={custForm.formState.errors.name?.message}
+            className="font-bold"
+            {...custForm.register('name')}
+          />
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-muted font-bold mb-1">Téléphone *</label>
-              <input
-                type="text"
-                placeholder="e.g. +221 77 600 00 00"
-                value={custPhone}
-                onChange={(e) => setCustPhone(e.target.value)}
-                className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-muted font-bold mb-1">Email (Optionnel)</label>
-              <input
-                type="email"
-                placeholder="e.g. sarr@gmail.com"
-                value={custEmail}
-                onChange={(e) => setCustEmail(e.target.value)}
-                className="w-full border border-border p-2.5 rounded-xl font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-muted font-bold mb-1">Société / Chantier BTP</label>
-            <input
-              type="text"
-              placeholder="e.g. Horizon Construction S.U.A.R.L."
-              value={custCompany}
-              onChange={(e) => setCustCompany(e.target.value)}
-              className="w-full border border-border p-2.5 rounded-xl font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
+            <Input
+              label="Téléphone *"
+              placeholder="e.g. +221 77 600 00 00"
+              error={custForm.formState.errors.phone?.message}
+              className="font-mono font-bold"
+              {...custForm.register('phone')}
+            />
+            <Input
+              label="Email (Optionnel)"
+              type="email"
+              placeholder="e.g. sarr@gmail.com"
+              error={custForm.formState.errors.email?.message}
+              className="font-bold"
+              {...custForm.register('email')}
             />
           </div>
 
-          <div>
-            <label className="block text-muted font-bold mb-1">Adresse (Dakar / Quartier)</label>
-            <input
-              type="text"
-              placeholder="e.g. Liberté 6 Extension, Dakar"
-              value={custAddress}
-              onChange={(e) => setCustAddress(e.target.value)}
-              className="w-full border border-border p-2.5 rounded-xl font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
-            />
-          </div>
+          <Input
+            label="Société / Chantier BTP"
+            placeholder="e.g. Horizon Construction S.U.A.R.L."
+            className="font-bold"
+            {...custForm.register('company')}
+          />
+
+          <Input
+            label="Adresse (Dakar / Quartier)"
+            placeholder="e.g. Liberté 6 Extension, Dakar"
+            className="font-bold"
+            {...custForm.register('address')}
+          />
         </form>
       </Modal>
 
       {/* MODAL: ADD SUPPLIER */}
       <Modal
         isOpen={isAddSuppOpen}
-        onClose={() => setIsAddSuppOpen(false)}
+        onClose={() => { suppForm.reset(); setIsAddSuppOpen(false); }}
         title="Nouveau Fournisseur"
         icon={UserPlus}
         size="md"
         footer={
           <div className="flex justify-end space-x-2">
-            <Button variant="secondary" type="button" onClick={() => setIsAddSuppOpen(false)}>
+            <Button variant="secondary" type="button" onClick={() => { suppForm.reset(); setIsAddSuppOpen(false); }}>
               Annuler
             </Button>
             <Button variant="dark" type="submit" form="add-supp-form">
@@ -436,53 +422,39 @@ export default function ContactsView({
           </div>
         }
       >
-        <form id="add-supp-form" onSubmit={handleAddSuppSubmit} className="space-y-4 text-xs">
-          <div>
-            <label className="block text-muted font-bold mb-1">Raison Sociale / Nom *</label>
-            <input
-              type="text"
-              placeholder="e.g. Peintures Astral Sénégal SA"
-              value={suppName}
-              onChange={(e) => setSuppName(e.target.value)}
-              className="w-full border border-border p-2.5 rounded-xl font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
-              required
-            />
-          </div>
+        <form id="add-supp-form" onSubmit={suppForm.handleSubmit(onSuppFormSubmit)} className="space-y-4 text-xs">
+          <Input
+            label="Raison Sociale / Nom *"
+            placeholder="e.g. Peintures Astral Sénégal SA"
+            error={suppForm.formState.errors.name?.message}
+            className="font-bold"
+            {...suppForm.register('name')}
+          />
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-muted font-bold mb-1">Téléphone *</label>
-              <input
-                type="text"
-                placeholder="e.g. +221 33 800 00 00"
-                value={suppPhone}
-                onChange={(e) => setSuppPhone(e.target.value)}
-                className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-muted font-bold mb-1">Email</label>
-              <input
-                type="email"
-                placeholder="e.g. contact@astral.sn"
-                value={suppEmail}
-                onChange={(e) => setSuppEmail(e.target.value)}
-                className="w-full border border-border p-2.5 rounded-xl font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-muted font-bold mb-1">Adresse (Usine / Dépôt)</label>
-            <input
-              type="text"
-              placeholder="e.g. Zone Industrielle de Dakar-Yarakh"
-              value={suppAddress}
-              onChange={(e) => setSuppAddress(e.target.value)}
-              className="w-full border border-border p-2.5 rounded-xl font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
+            <Input
+              label="Téléphone *"
+              placeholder="e.g. +221 33 800 00 00"
+              error={suppForm.formState.errors.phone?.message}
+              className="font-mono font-bold"
+              {...suppForm.register('phone')}
+            />
+            <Input
+              label="Email"
+              type="email"
+              placeholder="e.g. contact@astral.sn"
+              error={suppForm.formState.errors.email?.message}
+              className="font-bold"
+              {...suppForm.register('email')}
             />
           </div>
+
+          <Input
+            label="Adresse (Usine / Dépôt)"
+            placeholder="e.g. Zone Industrielle de Dakar-Yarakh"
+            className="font-bold"
+            {...suppForm.register('address')}
+          />
         </form>
       </Modal>
 

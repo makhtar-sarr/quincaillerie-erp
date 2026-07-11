@@ -8,7 +8,7 @@ use rusqlite::{Connection, OpenFlags};
 use std::path::Path;
 
 /// Current schema version. Bump this when adding new migration files.
-const SCHEMA_VERSION: i32 = 1;
+const SCHEMA_VERSION: i32 = 2;
 
 /// Open (or create) the SQLite database at `path` with production-safe pragmas.
 ///
@@ -44,8 +44,14 @@ pub fn run_migrations(conn: &mut Connection) -> Result<(), String> {
         // Migrations run inside a transaction so a failure leaves the DB clean.
         let tx = conn.transaction().map_err(|e| e.to_string())?;
 
-        tx.execute_batch(include_str!("../migrations/001_initial.sql"))
-            .map_err(|e| e.to_string())?;
+        if current < 1 {
+            tx.execute_batch(include_str!("../migrations/001_initial.sql"))
+                .map_err(|e| e.to_string())?;
+        }
+        if current < 2 {
+            tx.execute_batch(include_str!("../migrations/002_add_audit.sql"))
+                .map_err(|e| e.to_string())?;
+        }
 
         tx.pragma_update(None, "user_version", SCHEMA_VERSION)
             .map_err(|e| e.to_string())?;

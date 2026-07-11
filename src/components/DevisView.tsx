@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
+  ChevronDown,
+  ChevronUp,
   Download,
   FileText, 
   Plus, 
@@ -19,7 +21,9 @@ import {
   User,
   ShoppingBag,
   QrCode,
-  AlertTriangle
+  AlertTriangle,
+  RotateCcw,
+  Filter,
 } from 'lucide-react';
 import { Quote, Item, Customer } from '../types';
 import { formatFCFA } from '../utils/data';
@@ -33,6 +37,7 @@ import { Table } from './ui/Table';
 import { Button } from './ui/Button';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
+import { useAdvancedSearch } from '../hooks/useAdvancedSearch';
 
 interface DevisViewProps {
   quotes: Quote[];
@@ -85,18 +90,27 @@ export default function DevisView({
     handleTempProductChange,
     handleAddLine,
     removeLine,
+    fieldErrors,
     handleSaveQuote: hookSaveQuote,
   } = useQuoteForm(quotes, items, customers, onAddQuote, onUpdateQuoteStatus, onConvertQuoteToInvoice);
 
   const { selectedMonth, setSelectedMonth, selectedYear, setSelectedYear, filterByMonth } = useTemporalFilter<Quote>();
   const [{ settings }] = useStore();
 
-  const displayedQuotes = useMemo(() => {
-    return filterByMonth(filteredQuotes);
-  }, [filteredQuotes, filterByMonth]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const handleSaveQuote = (status: Quote['status']) => {
-    if (hookSaveQuote(status)) {
+  // Advanced filters: date range + amount range (additive on top of form search/status)
+  const advancedSearch = useAdvancedSearch(filteredQuotes, {
+    dateField: 'date',
+    amountField: 'total',
+  });
+
+  const displayedQuotes = useMemo(() => {
+    return filterByMonth(advancedSearch.filtered);
+  }, [advancedSearch.filtered, filterByMonth]);
+
+  const handleSaveQuote = async (status: Quote['status']) => {
+    if (await hookSaveQuote(status)) {
       setIsCreateOpen(false);
     }
   };
@@ -239,8 +253,22 @@ export default function DevisView({
   const lineItemData = quoteLines.map((line, idx) => ({
     itemName: <span className="font-bold text-foreground">{line.itemName}</span>,
     unit: <span className="text-muted font-semibold">{line.unit}</span>,
-    quantity: <span className="font-mono font-black text-foreground bg-neutral-50/30 px-2 py-0.5 rounded">{line.quantity}</span>,
-    price: <span className="font-mono text-muted font-bold">{formatFCFA(line.price)}</span>,
+    quantity: (
+      <div>
+        <span className="font-mono font-black text-foreground bg-neutral-50/30 px-2 py-0.5 rounded">{line.quantity}</span>
+        {fieldErrors[`items.${idx}.quantity`] && (
+          <p className="text-danger text-[9px] font-bold mt-0.5">{fieldErrors[`items.${idx}.quantity`]}</p>
+        )}
+      </div>
+    ),
+    price: (
+      <div>
+        <span className="font-mono text-muted font-bold">{formatFCFA(line.price)}</span>
+        {fieldErrors[`items.${idx}.price`] && (
+          <p className="text-danger text-[9px] font-bold mt-0.5">{fieldErrors[`items.${idx}.price`]}</p>
+        )}
+      </div>
+    ),
     total: <span className="font-mono font-black text-foreground">{formatFCFA(line.total)}</span>,
     delete: (
       <Button
@@ -371,7 +399,94 @@ export default function DevisView({
             <option value={2027}>2027</option>
           </select>
         </div>
+        <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className={`flex items-center gap-1.5 px-3 py-3 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-colors shrink-0 ${
+            showAdvanced || advancedSearch.activeFilterCount > 0
+              ? 'bg-primary/10 border-primary text-primary'
+              : 'border-border text-muted hover:bg-neutral-50 dark:hover:bg-neutral-200/50'
+          }`}
+        >
+          <Filter className="h-3.5 w-3.5" />
+          <span>Filtres</span>
+          {advancedSearch.activeFilterCount > 0 && (
+            <span className="bg-primary text-white dark:text-neutral-900 text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center">
+              {advancedSearch.activeFilterCount}
+            </span>
+          )}
+          {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </button>
       </div>
+
+      {/* Advanced filter panel */}
+      <AnimatePresence>
+        {showAdvanced && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-surface p-4 rounded-[2rem] border-2 border-primary/20 shadow-xs text-xs -mt-1">
+              <div className="flex flex-wrap items-end gap-4">
+                {/* Date range */}
+                <div>
+                  <label className="block text-[10px] text-muted font-black uppercase tracking-wider mb-1">Date début</label>
+                  <input
+                    type="date"
+                    value={advancedSearch.filters.dateFrom || ''}
+                    onChange={(e) => advancedSearch.setFilter('dateFrom', e.target.value)}
+                    className="py-2.5 px-3 border border-border rounded-xl font-mono font-bold text-xs focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-100 dark:text-neutral-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-muted font-black uppercase tracking-wider mb-1">Date fin</label>
+                  <input
+                    type="date"
+                    value={advancedSearch.filters.dateTo || ''}
+                    onChange={(e) => advancedSearch.setFilter('dateTo', e.target.value)}
+                    className="py-2.5 px-3 border border-border rounded-xl font-mono font-bold text-xs focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-100 dark:text-neutral-800"
+                  />
+                </div>
+                {/* Amount range */}
+                <div>
+                  <label className="block text-[10px] text-muted font-black uppercase tracking-wider mb-1">Montant min (FCFA)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={advancedSearch.filters.amountMin ?? ''}
+                    onChange={(e) => advancedSearch.setFilter('amountMin', e.target.value ? Number(e.target.value) : undefined)}
+                    className="py-2.5 px-3 w-32 border border-border rounded-xl font-mono font-bold text-xs focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-muted font-black uppercase tracking-wider mb-1">Montant max (FCFA)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="∞"
+                    value={advancedSearch.filters.amountMax ?? ''}
+                    onChange={(e) => advancedSearch.setFilter('amountMax', e.target.value ? Number(e.target.value) : undefined)}
+                    className="py-2.5 px-3 w-32 border border-border rounded-xl font-mono font-bold text-xs focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                  />
+                </div>
+                {/* Reset */}
+                <div>
+                  <button
+                    onClick={() => advancedSearch.resetFilters()}
+                    className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-border text-muted hover:text-foreground hover:bg-neutral-50 dark:hover:bg-neutral-200/50 text-[10px] font-black uppercase tracking-wider transition-colors"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    <span>Réinitialiser</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Export buttons */}
       <div className="flex justify-end gap-2">
@@ -515,6 +630,9 @@ export default function DevisView({
                   </option>
                 ))}
               </select>
+              {fieldErrors.customerId && (
+                <p className="text-danger text-xs mt-1 font-bold">{fieldErrors.customerId}</p>
+              )}
             </div>
             <div>
               <label className="block text-muted font-bold mb-1">Date Émission</label>
@@ -593,6 +711,9 @@ export default function DevisView({
                   data={lineItemData}
                 />
               </div>
+            )}
+            {fieldErrors.items && (
+              <p className="text-danger text-xs mt-1 font-bold">{fieldErrors.items}</p>
             )}
           </div>
 

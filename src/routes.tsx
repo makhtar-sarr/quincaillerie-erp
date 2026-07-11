@@ -7,6 +7,7 @@ import {
   ShoppingBag,
   Users,
   Settings,
+  Shield,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -18,6 +19,7 @@ const DevisView = lazy(() => import('./components/DevisView'));
 const InvoicesView = lazy(() => import('./components/InvoicesView'));
 const ContactsView = lazy(() => import('./components/ContactsView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
+const AuditView = lazy(() => import('./components/AuditView'));
 const LoginView = lazy(() => import('./components/LoginView'));
 
 export interface SidebarItem {
@@ -34,6 +36,7 @@ export const sidebarItems: SidebarItem[] = [
   { id: 'invoices', name: 'Ventes & Factures', path: '/invoices', icon: ShoppingBag },
   { id: 'contacts', name: 'Clients & Fournisseurs', path: '/contacts', icon: Users },
   { id: 'settings', name: 'Paramètres', path: '/settings', icon: Settings },
+  { id: 'audit', name: 'Journal d\'Audit', path: '/audit', icon: Shield },
 ];
 
 interface AppRoutesProps {
@@ -206,6 +209,7 @@ export default function AppRoutes({
           />
         }
       />
+      <Route path="/audit" element={<AuditView />} />
     </Routes>
   );
 }

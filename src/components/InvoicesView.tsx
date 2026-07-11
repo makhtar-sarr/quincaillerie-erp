@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
+  ChevronDown,
+  ChevronUp,
   Download,
   FileSpreadsheet, 
   FileText,
@@ -16,7 +18,9 @@ import {
   User,
   TrendingUp,
   AlertTriangle,
-  QrCode
+  QrCode,
+  RotateCcw,
+  Filter,
 } from 'lucide-react';
 import { Invoice, Item, Customer } from '../types';
 import { formatFCFA } from '../utils/data';
@@ -30,6 +34,7 @@ import { Button } from './ui/Button';
 import { Table } from './ui/Table';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
+import { useAdvancedSearch } from '../hooks/useAdvancedSearch';
 
 interface InvoicesViewProps {
   invoices: Invoice[];
@@ -79,8 +84,15 @@ export default function InvoicesView({
   const [search, setSearch] = useState('');
   const [methodFilter, setMethodFilter] = useState<string>('Tous');
   const [statusFilter, setStatusFilter] = useState<string>('Tous');
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const { selectedMonth, setSelectedMonth, selectedYear, setSelectedYear, filterByMonth } = useTemporalFilter<Invoice>();
+
+  // Advanced filters: date range + amount range (additive on top of existing filters)
+  const advancedSearch = useAdvancedSearch(invoices, {
+    dateField: 'date',
+    amountField: 'total',
+  });
   const [{ settings }] = useStore();
 
   // Modal control states
@@ -102,14 +114,15 @@ export default function InvoicesView({
     tempQty, setTempQty,
     tempPrice, setTempPrice,
     totals,
+    fieldErrors,
     handleTempProductChange,
     handleAddLine,
     removeLine,
     handleSaveInvoice: hookSaveInvoice,
   } = useInvoiceForm(items, customers, onAddInvoice);
 
-  const handleFormSubmit = () => {
-    if (hookSaveInvoice()) {
+  const handleFormSubmit = async () => {
+    if (await hookSaveInvoice()) {
       setIsCreateOpen(false);
     }
   };
@@ -123,14 +136,16 @@ export default function InvoicesView({
 
   // Filter invoices list
   const filteredInvoices = useMemo(() => {
-    return filterByMonth(invoices).filter(inv => {
+    // Start with advanced-filtered results (date range, amount range)
+    const base = advancedSearch.filtered;
+    return filterByMonth(base).filter(inv => {
       const matchSearch = inv.number.toLowerCase().includes(search.toLowerCase()) ||
                           inv.customerName.toLowerCase().includes(search.toLowerCase());
       const matchMethod = methodFilter === 'Tous' || inv.paymentMethod === methodFilter;
       const matchStatus = statusFilter === 'Tous' || inv.status === statusFilter;
       return matchSearch && matchMethod && matchStatus;
     }).sort((a, b) => b.number.localeCompare(a.number));
-  }, [invoices, search, methodFilter, statusFilter, filterByMonth]);
+  }, [invoices, advancedSearch.filtered, search, methodFilter, statusFilter, filterByMonth]);
 
   const printInvoice = () => {
     window.print();
@@ -389,7 +404,96 @@ export default function InvoicesView({
             <option value={2027}>2027</option>
           </select>
         </div>
+        <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl border text-[10px] font-black uppercase tracking-wider transition-colors ${
+            showAdvanced || advancedSearch.activeFilterCount > 0
+              ? 'bg-primary/10 border-primary text-primary'
+              : 'border-border text-muted hover:bg-neutral-50 dark:hover:bg-neutral-200/50'
+          }`}
+        >
+          <Filter className="h-3.5 w-3.5" />
+          <span>Filtres</span>
+          {advancedSearch.activeFilterCount > 0 && (
+            <span className="bg-primary text-white dark:text-neutral-900 text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center">
+              {advancedSearch.activeFilterCount}
+            </span>
+          )}
+          {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </button>
       </div>
+
+      {/* Advanced filter panel */}
+      <AnimatePresence>
+        {showAdvanced && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-surface p-4 rounded-3xl border-2 border-primary/20 shadow-xs text-xs">
+              <div className="flex flex-wrap items-end gap-4">
+                {/* Date range */}
+                <div>
+                  <label className="block text-[10px] text-muted font-black uppercase tracking-wider mb-1">Date début</label>
+                  <input
+                    type="date"
+                    value={advancedSearch.filters.dateFrom || ''}
+                    onChange={(e) => advancedSearch.setFilter('dateFrom', e.target.value)}
+                    className="py-2 px-3 border border-border rounded-2xl font-mono font-bold text-xs focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-100 dark:text-neutral-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-muted font-black uppercase tracking-wider mb-1">Date fin</label>
+                  <input
+                    type="date"
+                    value={advancedSearch.filters.dateTo || ''}
+                    onChange={(e) => advancedSearch.setFilter('dateTo', e.target.value)}
+                    className="py-2 px-3 border border-border rounded-2xl font-mono font-bold text-xs focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-100 dark:text-neutral-800"
+                  />
+                </div>
+                {/* Amount range */}
+                <div>
+                  <label className="block text-[10px] text-muted font-black uppercase tracking-wider mb-1">Montant min (FCFA)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={advancedSearch.filters.amountMin ?? ''}
+                    onChange={(e) => advancedSearch.setFilter('amountMin', e.target.value ? Number(e.target.value) : undefined)}
+                    className="py-2 px-3 w-32 border border-border rounded-2xl font-mono font-bold text-xs focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-muted font-black uppercase tracking-wider mb-1">Montant max (FCFA)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="∞"
+                    value={advancedSearch.filters.amountMax ?? ''}
+                    onChange={(e) => advancedSearch.setFilter('amountMax', e.target.value ? Number(e.target.value) : undefined)}
+                    className="py-2 px-3 w-32 border border-border rounded-2xl font-mono font-bold text-xs focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                  />
+                </div>
+                {/* Reset */}
+                <div>
+                  <button
+                    onClick={() => {
+                      advancedSearch.resetFilters();
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-border text-muted hover:text-foreground hover:bg-neutral-50 dark:hover:bg-neutral-200/50 text-[10px] font-black uppercase tracking-wider transition-colors"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    <span>Réinitialiser</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Export buttons */}
       <div className="flex justify-end gap-2">
@@ -585,6 +689,9 @@ export default function InvoicesView({
                   </option>
                 ))}
               </select>
+              {fieldErrors.customerId && (
+                <p className="text-danger text-xs mt-1 font-bold">{fieldErrors.customerId}</p>
+              )}
             </div>
             <div>
               <label className="block text-muted font-bold mb-1">Date Facturation</label>
@@ -671,8 +778,22 @@ export default function InvoicesView({
                   data={invoiceLines.map((line, idx) => ({
                     designation: line.itemName,
                     unit: line.unit,
-                    quantity: line.quantity,
-                    price: formatFCFA(line.price),
+                    quantity: (
+                      <div>
+                        <span>{line.quantity}</span>
+                        {fieldErrors[`items.${idx}.quantity`] && (
+                          <p className="text-danger text-[9px] font-bold mt-0.5">{fieldErrors[`items.${idx}.quantity`]}</p>
+                        )}
+                      </div>
+                    ),
+                    price: (
+                      <div>
+                        <span>{formatFCFA(line.price)}</span>
+                        {fieldErrors[`items.${idx}.price`] && (
+                          <p className="text-danger text-[9px] font-bold mt-0.5">{fieldErrors[`items.${idx}.price`]}</p>
+                        )}
+                      </div>
+                    ),
                     totalHT: formatFCFA(line.total),
                     delete: (
                       <Button
@@ -686,6 +807,9 @@ export default function InvoicesView({
                   }))}
                 />
               </div>
+            )}
+            {fieldErrors.items && (
+              <p className="text-danger text-xs mt-1 font-bold">{fieldErrors.items}</p>
             )}
           </div>
 
@@ -707,6 +831,9 @@ export default function InvoicesView({
                     <option value="Chèque">Chèque</option>
                     <option value="Virement">Virement bancaire</option>
                   </select>
+                  {fieldErrors.paymentMethod && (
+                    <p className="text-danger text-xs mt-1 font-bold">{fieldErrors.paymentMethod}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-muted font-bold mb-1">Montant Reçu (Encaissé) *</label>
@@ -718,6 +845,9 @@ export default function InvoicesView({
                     className="w-full border border-border p-2.5 rounded-xl font-mono focus:ring-2 focus:ring-primary focus:outline-hidden text-xs font-black bg-neutral-50/50"
                     required
                   />
+                  {fieldErrors.amountPaid && (
+                    <p className="text-danger text-xs mt-1 font-bold">{fieldErrors.amountPaid}</p>
+                  )}
                 </div>
               </div>
 
@@ -765,6 +895,9 @@ export default function InvoicesView({
                     onChange={(e) => setDiscount(Math.max(0, Number(e.target.value)))}
                     className="w-28 border border-border p-1.5 rounded-xl font-mono font-black text-right focus:ring-2 focus:ring-primary focus:outline-hidden bg-surface"
                   />
+                  {fieldErrors.discount && (
+                    <p className="text-danger text-xs mt-1 font-bold">{fieldErrors.discount}</p>
+                  )}
                 </div>
                 <div className="flex items-center justify-between text-muted font-semibold">
                   <span>TVA sénégalaise (18%) :</span>

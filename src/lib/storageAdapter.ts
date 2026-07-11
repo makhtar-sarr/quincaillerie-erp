@@ -7,6 +7,7 @@ import type {
   Supplier,
   Quote,
   Invoice,
+  AuditEntry,
 } from '@/types';
 import { DEFAULT_SETTINGS } from '@/utils/data';
 import { formatNumber } from '@/lib/numbering';
@@ -32,6 +33,7 @@ export const LS_KEYS = {
   suppliers: 'erp_suppliers',
   quotes: 'erp_quotes',
   invoices: 'erp_invoices',
+  audit: 'erp_audit',
 } as const;
 
 export interface StoreState {
@@ -407,4 +409,52 @@ export async function getNextNumber(prefix: string, year: number): Promise<strin
     }
   }
   return formatNumber(prefix, year, max + 1);
+}
+
+// ---------------------------------------------------------------------------
+// Audit trail
+//
+// NOTE: the localStorage (web) audit log is advisory-only. It is not
+// tamper-proof — anyone with devtools access can edit `erp_audit`. The
+// authoritative, tamper-resistant trail lives in the SQLite `audit_log` table
+// used in Tauri mode. Callers must not rely on the web log for security.
+// ---------------------------------------------------------------------------
+
+const MAX_AUDIT_ENTRIES = 1000;
+
+/** Append an audit entry. Tauri → `add_audit_entry`; web → localStorage FIFO. */
+export async function addAuditEntry(entry: AuditEntry): Promise<void> {
+  if (isTauri()) {
+    await invoke('add_audit_entry', { entry });
+    return;
+  }
+
+  const raw = window.localStorage.getItem(LS_KEYS.audit);
+  const arr: AuditEntry[] = raw ? JSON.parse(raw) : [];
+
+  const finalEntry: AuditEntry = {
+    ...entry,
+    id: entry.id || `audit-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    ts: entry.ts || new Date().toISOString(),
+  };
+
+  arr.push(finalEntry);
+
+  // FIFO trim: keep only the most recent MAX_AUDIT_ENTRIES entries.
+  if (arr.length > MAX_AUDIT_ENTRIES) {
+    arr.splice(0, arr.length - MAX_AUDIT_ENTRIES);
+  }
+
+  writeLocalStorage(LS_KEYS.audit, arr);
+}
+
+/** Return the full audit log, newest first. */
+export async function getAuditLog(): Promise<AuditEntry[]> {
+  if (isTauri()) {
+    return invoke<AuditEntry[]>('get_audit_log');
+  }
+
+  const raw = window.localStorage.getItem(LS_KEYS.audit);
+  const arr: AuditEntry[] = raw ? JSON.parse(raw) : [];
+  return [...arr].sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0));
 }

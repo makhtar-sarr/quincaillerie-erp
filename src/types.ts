@@ -105,3 +105,13 @@ export interface StoreSettings {
   tvaRate: number; // percentage (e.g. 18 for standard Senegal VAT)
   currency: string; // 'FCFA'
 }
+
+export interface AuditEntry {
+  id: string; // prefix-uuid id, e.g. 'audit-<timestamp>'
+  ts: string; // ISO 8601 timestamp of the action
+  operator: string; // who performed the action
+  action: string; // e.g. 'create', 'update', 'delete'
+  entity: string; // e.g. 'invoice', 'item', 'customer'
+  entityId?: string; // id of the affected entity
+  detail?: string; // free-form context
+}

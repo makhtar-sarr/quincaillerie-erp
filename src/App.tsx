@@ -30,6 +30,7 @@ import {
   saveSettings,
   restoreAll,
   getNextNumber,
+  addAuditEntry,
 } from './lib/storageAdapter';
 
 export default function App() {
@@ -63,6 +64,26 @@ function AppContent() {
     navigate(pathMap[view] || '/dashboard');
   };
 
+  const logAudit = (
+    action: 'create' | 'update' | 'delete',
+    entity: string,
+    entityId?: string,
+    detail?: string,
+    operatorOverride?: string,
+  ) => {
+    try {
+      addAuditEntry({
+        id: `audit-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        ts: new Date().toISOString(),
+        operator: operatorOverride || settings.storeName || 'Système',
+        action,
+        entity,
+        entityId,
+        detail,
+      });
+    } catch { void 0; }
+  };
+
   const handleAddItem = async (itemData: Omit<Item, 'id' | 'stockCount'>, initialQty: number, operator: string) => {
     const newId = generateId('prod');
     const newItem: Item = {
@@ -73,6 +94,7 @@ function AppContent() {
 
     const saved = await addItem(newItem);
     dispatch({ type: 'SET_ITEMS', payload: [...items, saved] });
+    logAudit('create', 'item', newId, `Article "${newItem.name}" créé`, operator);
 
     if (initialQty > 0) {
       const newMovement: StockMovement = {
@@ -88,18 +110,21 @@ function AppContent() {
       };
       const savedMovement = await addMovement(newMovement);
       dispatch({ type: 'SET_MOVEMENTS', payload: [savedMovement, ...movements] });
+      logAudit('create', 'movement', newMovement.id, `Entrée initiale ${initialQty} ${newItem.unit}`, operator);
     }
   };
 
   const handleUpdateItem = async (updatedItem: Item) => {
     const saved = await updateItem(updatedItem);
     dispatch({ type: 'SET_ITEMS', payload: items.map(i => i.id === saved.id ? saved : i) });
+    logAudit('update', 'item', saved.id, `Article "${saved.name}" mis à jour`);
   };
 
   const handleDeleteItem = async (id: string) => {
     await deleteItem(id);
     dispatch({ type: 'SET_ITEMS', payload: items.filter(i => i.id !== id) });
     dispatch({ type: 'SET_MOVEMENTS', payload: movements.filter(m => m.itemId !== id) });
+    logAudit('delete', 'item', id);
   };
 
   const handleAdjustStock = async (
@@ -118,6 +143,7 @@ function AppContent() {
 
     const savedItem = await updateItem(updatedItem);
     dispatch({ type: 'SET_ITEMS', payload: items.map(i => i.id === itemId ? savedItem : i) });
+    logAudit('update', 'item', itemId, `Stock ajusté: ${type} ${qty} ${itemObj.unit}`, operator);
 
     const newMovement: StockMovement = {
       id: generateId('mov'),
@@ -132,6 +158,7 @@ function AppContent() {
     };
     const savedMovement = await addMovement(newMovement);
     dispatch({ type: 'SET_MOVEMENTS', payload: [savedMovement, ...movements] });
+    logAudit('create', 'movement', newMovement.id, `${type} ${qty} ${itemObj.unit} — ${reason}`, operator);
   };
 
   const handleQuickRestock = (itemId: string, qty: number) => {
@@ -148,6 +175,7 @@ function AppContent() {
     };
     const saved = await addQuote(newQuote, 'Système');
     dispatch({ type: 'SET_QUOTES', payload: [saved, ...quotes] });
+    logAudit('create', 'quote', newQuote.id, `Devis ${nextNumber} créé`);
   };
 
   const handleUpdateQuoteStatus = async (id: string, status: Quote['status']) => {
@@ -157,11 +185,13 @@ function AppContent() {
     } else {
       dispatch({ type: 'SET_QUOTES', payload: quotes.map(q => q.id === id ? { ...q, status } : q) });
     }
+    logAudit('update', 'quote', id, `Statut changé vers "${status}"`);
   };
 
   const handleDeleteQuote = async (id: string) => {
     await deleteQuote(id);
     dispatch({ type: 'SET_QUOTES', payload: quotes.filter(q => q.id !== id) });
+    logAudit('delete', 'quote', id);
   };
 
   const handleAddInvoice = async (invoiceData: Omit<Invoice, 'id' | 'number'>, operator: string) => {
@@ -177,13 +207,13 @@ function AppContent() {
     // atomically by the Rust `add_invoice` command (Tauri) / adapter.
     const saved = await addInvoice(newInvoice, operator);
     dispatch({ type: 'SET_INVOICES', payload: [saved, ...invoices] });
+    logAudit('create', 'invoice', newInvoice.id, `Facture ${nextNumber} créée`, operator);
   };
 
   const handleDeleteInvoice = async (id: string) => {
-    // Stock restoration, movement removal and balance reversal are handled
-    // atomically by the Rust `delete_invoice` command (Tauri) / adapter.
     await deleteInvoice(id);
     dispatch({ type: 'SET_INVOICES', payload: invoices.filter(inv => inv.id !== id) });
+    logAudit('delete', 'invoice', id);
   };
 
   const handleConvertQuoteToInvoice = async (
@@ -194,6 +224,7 @@ function AppContent() {
   ) => {
     const savedInvoice = await convertQuote(quote.id, paymentMethod, amountPaid, operator);
     dispatch({ type: 'SET_INVOICES', payload: [savedInvoice, ...invoices] });
+    logAudit('create', 'invoice', savedInvoice.id, `Facture ${savedInvoice.number} créée depuis devis ${quote.number}`, operator);
 
     const savedQuote = await updateQuoteStatus(quote.id, 'Accepté');
     if (savedQuote) {
@@ -201,6 +232,7 @@ function AppContent() {
     } else {
       dispatch({ type: 'SET_QUOTES', payload: quotes.map(q => q.id === quote.id ? { ...q, status: 'Accepté' as Quote['status'] } : q) });
     }
+    logAudit('update', 'quote', quote.id, `Devis ${quote.number} converti en facture`, operator);
   };
 
   const handleAddCustomer = async (cData: Omit<Customer, 'id' | 'outstandingBalance'>) => {
@@ -211,16 +243,19 @@ function AppContent() {
     };
     const saved = await addCustomer(newCustomer);
     dispatch({ type: 'SET_CUSTOMERS', payload: [...customers, saved] });
+    logAudit('create', 'customer', newCustomer.id, `Client "${newCustomer.name}" créé`);
   };
 
   const handleUpdateCustomer = async (cUpdated: Customer) => {
     const saved = await updateCustomer(cUpdated);
     dispatch({ type: 'SET_CUSTOMERS', payload: customers.map(c => c.id === saved.id ? saved : c) });
+    logAudit('update', 'customer', cUpdated.id, `Client "${cUpdated.name}" mis à jour`);
   };
 
   const handleDeleteCustomer = async (id: string) => {
     await deleteCustomer(id);
     dispatch({ type: 'SET_CUSTOMERS', payload: customers.filter(c => c.id !== id) });
+    logAudit('delete', 'customer', id);
   };
 
   const handlePayCustomerDebt = async (customerId: string, amount: number) => {
@@ -247,6 +282,7 @@ function AppContent() {
     };
     await addInvoice(newReceiptInvoice, 'Système');
     dispatch({ type: 'SET_INVOICES', payload: [newReceiptInvoice, ...invoices] });
+    logAudit('create', 'invoice', newReceiptInvoice.id, `Recouvrement ${amount} FCFA — ${customerObj.name}`);
 
     const updatedCustomers = customers.map(c => {
       if (c.id === customerId) {
@@ -260,6 +296,7 @@ function AppContent() {
     const updatedCustomer = updatedCustomers.find(c => c.id === customerId);
     if (updatedCustomer) {
       await updateCustomer(updatedCustomer);
+      logAudit('update', 'customer', customerId, `Crédit réduit de ${amount} FCFA`);
     }
     dispatch({ type: 'SET_CUSTOMERS', payload: updatedCustomers });
   };
@@ -272,21 +309,25 @@ function AppContent() {
     };
     const saved = await addSupplier(newSupplier);
     dispatch({ type: 'SET_SUPPLIERS', payload: [...suppliers, saved] });
+    logAudit('create', 'supplier', newSupplier.id, `Fournisseur "${newSupplier.name}" créé`);
   };
 
   const handleUpdateSupplier = async (sUpdated: Supplier) => {
     const saved = await updateSupplier(sUpdated);
     dispatch({ type: 'SET_SUPPLIERS', payload: suppliers.map(s => s.id === saved.id ? saved : s) });
+    logAudit('update', 'supplier', sUpdated.id, `Fournisseur "${sUpdated.name}" mis à jour`);
   };
 
   const handleDeleteSupplier = async (id: string) => {
     await deleteSupplier(id);
     dispatch({ type: 'SET_SUPPLIERS', payload: suppliers.filter(s => s.id !== id) });
+    logAudit('delete', 'supplier', id);
   };
 
   const handleUpdateSettings = async (newSettings: StoreSettings) => {
     await saveSettings(newSettings);
     dispatch({ type: 'SET_SETTINGS', payload: newSettings });
+    logAudit('update', 'settings', undefined, 'Paramètres boutique mis à jour');
   };
 
   const handleRestoreAllData = async (restoredData: {

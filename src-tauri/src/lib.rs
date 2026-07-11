@@ -36,6 +36,9 @@ pub fn run() {
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
+      // Audit
+      commands::audit::add_audit_entry,
+      commands::audit::get_audit_log,
       // Items
       commands::items::get_items,
       commands::items::add_item,

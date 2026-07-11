@@ -1,5 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell,
+} from 'recharts';
 import { 
   TrendingUp, 
   Package, 
@@ -10,11 +14,18 @@ import {
   ArrowDownRight, 
   FileText, 
   CheckCircle, 
-  ShieldAlert 
+  ShieldAlert,
+  Bell,
+  Clock,
+  Copy,
+  BarChart3,
+  LineChart as LineChartIcon,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Item, Invoice, Quote, Customer, StockMovement } from '../types';
 import { formatFCFA } from '../utils/data';
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics';
+import { useTheme } from '../hooks/useTheme';
 import { Table } from './ui/Table';
 import { Button } from './ui/Button';
 
@@ -28,6 +39,26 @@ interface DashboardViewProps {
   onQuickRestock: (itemId: string, qty: number) => void;
 }
 
+interface OverdueInvoice extends Invoice {
+  daysOverdue: number;
+  amountDue: number;
+}
+
+function getOverdueInvoices(invoices: Invoice[], days = 30): OverdueInvoice[] {
+  const now = Date.now();
+  const cutoff = days * 86400000;
+
+  return invoices
+    .filter(inv => inv.status !== 'Payé')
+    .filter(inv => (now - new Date(inv.date).getTime()) > cutoff)
+    .map(inv => ({
+      ...inv,
+      daysOverdue: Math.floor((now - new Date(inv.date).getTime()) / 86400000),
+      amountDue: Math.max(0, inv.total - inv.amountPaid),
+    }))
+    .sort((a, b) => b.daysOverdue - a.daysOverdue);
+}
+
 export default function DashboardView({
   items,
   invoices,
@@ -38,6 +69,96 @@ export default function DashboardView({
   onQuickRestock
 }: DashboardViewProps) {
   const { metrics, salesByCategory, recentSales, recentMovements } = useDashboardMetrics(items, invoices, customers, movements);
+
+  const { resolved: themeResolved } = useTheme();
+  const isDark = themeResolved === 'dark';
+
+  const chartColors = {
+    text: isDark ? '#a8a29e' : '#64748b',
+    axis: isDark ? '#292524' : '#e2e8f0',
+    grid: isDark ? '#292524' : '#e2e8f0',
+    tooltipBg: isDark ? '#1c1917' : '#ffffff',
+    tooltipBorder: isDark ? '#292524' : '#e2e8f0',
+  };
+
+  const monthlyData = useMemo(() => {
+    // Generate last 12 months with French locale labels
+    const months: { key: string; label: string }[] = [];
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('fr-FR', { month: 'short' });
+      months.push({ key, label: label.charAt(0).toUpperCase() + label.slice(1) });
+    }
+
+    // Revenue from paid/partial invoices by month
+    const revenueByMonth: Record<string, number> = {};
+    invoices.forEach(inv => {
+      const m = inv.date.slice(0, 7);
+      if (inv.status === 'Payé') {
+        revenueByMonth[m] = (revenueByMonth[m] || 0) + inv.total;
+      } else if (inv.status === 'Partiel') {
+        revenueByMonth[m] = (revenueByMonth[m] || 0) + inv.amountPaid;
+      }
+    });
+
+    // Stock purchase costs (ENTREE-Achat Fournisseur movements × item.buyingPrice)
+    const purchasesByMonth: Record<string, number> = {};
+    movements.forEach(mov => {
+      if (mov.type === 'ENTREE' && mov.reason === 'Achat Fournisseur') {
+        const m = mov.date.slice(0, 7);
+        const item = items.find(i => i.id === mov.itemId);
+        if (item) {
+          purchasesByMonth[m] = (purchasesByMonth[m] || 0) + mov.quantity * item.buyingPrice;
+        }
+      }
+    });
+
+    // Cost of goods sold (paid invoice line items × item.buyingPrice)
+    const cogsByMonth: Record<string, number> = {};
+    invoices.forEach(inv => {
+      if (inv.status !== 'Payé') return;
+      const m = inv.date.slice(0, 7);
+      inv.items.forEach(line => {
+        const item = items.find(i => i.id === line.itemId);
+        if (item) {
+          cogsByMonth[m] = (cogsByMonth[m] || 0) + line.quantity * item.buyingPrice;
+        }
+      });
+    });
+
+    return months.map(m => {
+      const revenue = revenueByMonth[m.key] || 0;
+      const purchases = purchasesByMonth[m.key] || 0;
+      const cogs = cogsByMonth[m.key] || 0;
+      return {
+        month: m.label,
+        entrées: revenue,
+        sorties: purchases,
+        marge: revenue - cogs,
+      };
+    });
+  }, [invoices, movements, items]);
+
+  const overdueInvoices = useMemo(() => getOverdueInvoices(invoices), [invoices]);
+
+  const handleCopyReminder = async (inv: OverdueInvoice) => {
+    const msg = `Bonjour ${inv.customerName}, nous vous rappelons le solde de ${formatFCFA(inv.amountDue)} FCFA pour la facture ${inv.number}. Merci de procéder au règlement.`;
+    try {
+      await navigator.clipboard.writeText(msg);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = msg;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    toast.success('Message de rappel copié');
+  };
 
   const lowStockColumns = [
     { key: 'article', label: 'Article', className: 'truncate max-w-[160px]' },
@@ -170,6 +291,108 @@ export default function DashboardView({
         </div>
       </div>
 
+      {/* Financial Charts: Cashflow & Margin */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Cashflow Chart */}
+        <div className="bg-surface p-6 rounded-[2rem] border-2 border-border/80 shadow-[0_10px_40px_rgb(0,0,0,0.015)] flex flex-col">
+          <div className="flex items-center space-x-2 mb-4 pb-2 border-b border-neutral-50 dark:border-neutral-100">
+            <BarChart3 className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted font-display">Flux de Trésorerie</h3>
+          </div>
+          {monthlyData.some(d => d.entrées > 0 || d.sorties > 0) ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={monthlyData} barGap={4} barCategoryGap={20}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 11, fill: chartColors.text, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace' }}
+                  axisLine={{ stroke: chartColors.axis }}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: chartColors.text, fontFamily: 'JetBrains Mono, monospace' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v: number) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `${(v / 1_000).toFixed(0)}k` : `${v}`}
+                />
+                <Tooltip
+                  formatter={(value: number) => [formatFCFA(value), '']}
+                  contentStyle={{
+                    backgroundColor: chartColors.tooltipBg,
+                    border: `2px solid ${chartColors.tooltipBorder}`,
+                    borderRadius: '1rem',
+                    fontSize: '12px',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                  }}
+                  labelStyle={{ fontWeight: 700, marginBottom: 4 }}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: '11px', fontWeight: 600, fontFamily: 'Inter, sans-serif' }}
+                  iconType="circle"
+                  iconSize={8}
+                />
+                <Bar dataKey="entrées" name="Entrées (Ventes)" fill="#10b981" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                <Bar dataKey="sorties" name="Sorties (Achats)" fill="#f43f5e" radius={[6, 6, 0, 0]} maxBarSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-xs text-muted font-mono italic min-h-[200px]">
+              Aucune donnée de trésorerie
+            </div>
+          )}
+        </div>
+
+        {/* Margin Chart */}
+        <div className="bg-surface p-6 rounded-[2rem] border-2 border-border/80 shadow-[0_10px_40px_rgb(0,0,0,0.015)] flex flex-col">
+          <div className="flex items-center space-x-2 mb-4 pb-2 border-b border-neutral-50 dark:border-neutral-100">
+            <LineChartIcon className="h-4.5 w-4.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted font-display">Marge Bénéficiaire</h3>
+          </div>
+          {monthlyData.some(d => d.marge !== 0) ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={monthlyData} barGap={4} barCategoryGap={20}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 11, fill: chartColors.text, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace' }}
+                  axisLine={{ stroke: chartColors.axis }}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: chartColors.text, fontFamily: 'JetBrains Mono, monospace' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v: number) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `${(v / 1_000).toFixed(0)}k` : `${v}`}
+                />
+                <Tooltip
+                  formatter={(value: number) => [formatFCFA(value), 'Marge']}
+                  contentStyle={{
+                    backgroundColor: chartColors.tooltipBg,
+                    border: `2px solid ${chartColors.tooltipBorder}`,
+                    borderRadius: '1rem',
+                    fontSize: '12px',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                  }}
+                  labelStyle={{ fontWeight: 700, marginBottom: 4 }}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: '11px', fontWeight: 600, fontFamily: 'Inter, sans-serif' }}
+                  iconType="circle"
+                  iconSize={8}
+                />
+                <Bar dataKey="marge" name="Marge Nette" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-xs text-muted font-mono italic min-h-[200px]">
+              Aucune donnée de marge
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Visual Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chart 1: Category Sales - Custom Pie Chart with pure Tailwind */}
@@ -182,34 +405,27 @@ export default function DashboardView({
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Circular Indicator */}
-                <div className="flex items-center justify-center py-4 relative">
-                  <svg className="w-32 h-32 transform -rotate-90">
-                    {(() => {
-                      let accumulatedPercent = 0;
-                      return salesByCategory.map((cat, idx) => {
-                        const strokeDasharray = `${cat.percentage} ${100 - cat.percentage}`;
-                        const strokeDashoffset = -accumulatedPercent;
-                        accumulatedPercent += cat.percentage;
-                        return (
-                          <circle
-                            key={idx}
-                            cx="16"
-                            cy="16"
-                            r="10.5"
-                            fill="transparent"
-                            stroke={cat.color}
-                            strokeWidth="3.5"
-                            strokeDasharray={strokeDasharray}
-                            strokeDashoffset={strokeDashoffset}
-                            viewBox="0 0 32 32"
-                            className="transition-all duration-1000 ease-out"
-                          />
-                        );
-                      });
-                    })()}
-                  </svg>
-                  <div className="absolute flex flex-col items-center">
+                {/* Circular Indicator — Recharts Donut */}
+                <div className="flex items-center justify-center py-4 relative" style={{ height: 220 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={salesByCategory}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={70}
+                        outerRadius={105}
+                        paddingAngle={2}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {salesByCategory.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute flex flex-col items-center pointer-events-none">
                     <span className="text-base font-black font-display text-foreground">FCFA</span>
                     <span className="text-[10px] text-muted font-bold">Répartition</span>
                   </div>
@@ -371,6 +587,55 @@ export default function DashboardView({
             )}
           </div>
         </div>
+      </div>
+
+      {/* Overdue Invoices Section */}
+      <div className="bg-surface p-6 rounded-[2rem] border-2 border-border/80 shadow-[0_10px_40px_rgb(0,0,0,0.015)]">
+        <div className="flex items-center justify-between mb-4 pb-2 border-b border-neutral-50">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted font-display flex items-center space-x-2">
+            <Bell className="h-4.5 w-4.5 text-rose-600 dark:text-rose-400 shrink-0" />
+            <span>Factures impayées &gt; 30 jours</span>
+          </h3>
+        </div>
+
+        {overdueInvoices.length === 0 ? (
+          <div className="h-32 flex flex-col items-center justify-center text-center p-6 border border-dashed border-border rounded-[2rem]">
+            <CheckCircle className="h-10 w-10 text-emerald-500 dark:text-emerald-400 mb-2" />
+            <p className="text-xs text-foreground font-bold">Aucune facture en retard</p>
+            <p className="text-[10px] text-muted mt-1">Toutes les factures sont à jour.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {overdueInvoices.map((inv) => (
+              <div key={inv.id} className="flex items-center justify-between p-3.5 bg-neutral-50/50 rounded-2xl border border-border hover:bg-neutral-50 transition-colors">
+                <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3 items-center">
+                  <div className="min-w-0">
+                    <span className="font-bold text-foreground text-xs truncate block">{inv.customerName}</span>
+                  </div>
+                  <div>
+                    <span className="font-mono text-[11px] text-muted font-semibold">{inv.number}</span>
+                  </div>
+                  <div>
+                    <span className="font-black text-xs text-rose-600 dark:text-rose-400 font-mono">{formatFCFA(inv.amountDue)}</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <Clock className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
+                    <span className="font-bold text-xs text-amber-600 dark:text-amber-400">{inv.daysOverdue}j</span>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => handleCopyReminder(inv)}
+                  variant="icon"
+                  size="sm"
+                  className="shrink-0 ml-2"
+                  title="Copier le message de rappel"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

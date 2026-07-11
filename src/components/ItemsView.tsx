@@ -1,5 +1,8 @@
 import React, { useState, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
+  ChevronDown,
+  ChevronUp,
   Download,
   Upload,
   Package, 
@@ -12,6 +15,8 @@ import {
   PlusCircle,
   MinusCircle,
   TrendingUp,
+  RotateCcw,
+  Filter,
 } from 'lucide-react';
 import { Item, Category, StockMovement } from '../types';
 import { formatFCFA } from '../utils/data';
@@ -22,7 +27,12 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Table, type Column } from '@/components/ui/Table';
 import { cn } from '@/lib/utils';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { itemSchema } from '@/schemas/item';
 import { useTemporalFilter } from '@/hooks/useTemporalFilter';
+import { useAdvancedSearch } from '@/hooks/useAdvancedSearch';
 import { useAuth } from '@/context/AuthContext';
 import { importArticlesFromCSV } from '@/utils/import';
 import { useStore } from '@/context/StoreContext';
@@ -36,6 +46,9 @@ interface ItemsViewProps {
   onAdjustStock: (itemId: string, qty: number, type: 'ENTREE' | 'SORTIE', reason: StockMovement['reason'], operator: string, ref: string) => void;
 }
 
+const addItemFormSchema = itemSchema.omit({ id: true, stockCount: true });
+type AddItemFormData = z.infer<typeof addItemFormSchema>;
+
 export default function ItemsView({
   items,
   movements,
@@ -47,9 +60,15 @@ export default function ItemsView({
   const { user } = useAuth();
   const isVendeur = user?.role === 'vendeur';
   const [activeTab, setActiveTab] = useState<'catalog' | 'history'>('catalog');
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('Tous');
   const [statusFilter, setStatusFilter] = useState<'all' | 'alert' | 'out'>('all');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const advancedSearch = useAdvancedSearch(items, {
+    categoryField: 'category',
+    textSearchFields: ['name', 'ref'],
+  });
+
+  const activeFilterCount = advancedSearch.activeFilterCount + (statusFilter !== 'all' ? 1 : 0);
   
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -57,17 +76,27 @@ export default function ItemsView({
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
   
-  // Add item form state
-  const [newItemName, setNewItemName] = useState('');
-  const [newItemRef, setNewItemRef] = useState('');
-  const [newItemCategory, setNewItemCategory] = useState<Category>('Ciment & Matériaux');
-  const [newItemUnit, setNewItemUnit] = useState('Sac');
-  const [newItemMinStock, setNewItemMinStock] = useState(10);
+  // Add item form state (React Hook Form + Zod)
   const [newItemInitialQty, setNewItemInitialQty] = useState(0);
-  const [newItemBuying, setNewItemBuying] = useState(1000);
-  const [newItemSelling, setNewItemSelling] = useState(1200);
-  const [newItemDesc, setNewItemDesc] = useState('');
   const [operatorName, setOperatorName] = useState('Abdou');
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<AddItemFormData>({
+    resolver: zodResolver(addItemFormSchema),
+    defaultValues: {
+      name: '',
+      ref: '',
+      category: 'Ciment & Matériaux',
+      unit: 'Sac',
+      minStock: 10,
+      buyingPrice: 1000,
+      sellingPrice: 1200,
+      description: '',
+    },
+  });
 
   // Adjust stock form state
   const [adjustQty, setAdjustQty] = useState(10);
@@ -92,23 +121,13 @@ export default function ItemsView({
     'Divers'
   ];
 
-  // Filtering items
   const filteredItems = useMemo(() => {
-    return items.filter(item => {
-      const matchSearch = item.name.toLowerCase().includes(search.toLowerCase()) || 
-                          item.ref.toLowerCase().includes(search.toLowerCase());
-      const matchCategory = categoryFilter === 'Tous' || item.category === categoryFilter;
-      
-      let matchStatus = true;
-      if (statusFilter === 'alert') {
-        matchStatus = item.stockCount <= item.minStock && item.stockCount > 0;
-      } else if (statusFilter === 'out') {
-        matchStatus = item.stockCount <= 0;
-      }
-
-      return matchSearch && matchCategory && matchStatus;
+    return advancedSearch.filtered.filter(item => {
+      if (statusFilter === 'alert') return item.stockCount <= item.minStock && item.stockCount > 0;
+      if (statusFilter === 'out') return item.stockCount <= 0;
+      return true;
     });
-  }, [items, search, categoryFilter, statusFilter]);
+  }, [advancedSearch.filtered, statusFilter]);
 
   // Filtering movements
   const [historySearch, setHistorySearch] = useState('');
@@ -173,33 +192,19 @@ export default function ItemsView({
     setSelectedItem(null);
   };
 
-  const handleAddSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newItemName || !newItemRef) {
-      toast.error("Veuillez remplir le nom et la référence de l'article");
-      return;
-    }
+  const onAddItemSubmit = (data: AddItemFormData) => {
     onAddItem({
-      name: newItemName,
-      ref: newItemRef,
-      category: newItemCategory,
-      unit: newItemUnit,
-      minStock: Number(newItemMinStock),
-      buyingPrice: Number(newItemBuying),
-      sellingPrice: Number(newItemSelling),
-      description: newItemDesc
+      name: data.name,
+      ref: data.ref,
+      category: data.category as Category,
+      unit: data.unit,
+      minStock: data.minStock,
+      buyingPrice: data.buyingPrice,
+      sellingPrice: data.sellingPrice,
+      description: data.description,
     }, Number(newItemInitialQty), operatorName);
-
-    // reset
-    setNewItemName('');
-    setNewItemRef('');
-    setNewItemCategory('Ciment & Matériaux');
-    setNewItemUnit('Sac');
-    setNewItemMinStock(10);
+    reset();
     setNewItemInitialQty(0);
-    setNewItemBuying(1000);
-    setNewItemSelling(1200);
-    setNewItemDesc('');
     setIsAddModalOpen(false);
   };
 
@@ -353,15 +358,15 @@ export default function ItemsView({
                 variant="search"
                 icon={<Search className="h-4 w-4" />}
                 placeholder="Rechercher nom, code, réf..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={advancedSearch.filters.textSearch || ''}
+                onChange={(e) => advancedSearch.setFilter('textSearch', e.target.value)}
                 className="rounded-2xl bg-neutral-50/50 text-xs"
               />
 
               {/* Category Filter */}
               <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
+                value={advancedSearch.filters.category || 'Tous'}
+                onChange={(e) => advancedSearch.setFilter('category', e.target.value === 'Tous' ? '' : e.target.value)}
                 className="py-2.5 px-3.5 border border-border rounded-2xl text-xs bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden"
               >
                 <option value="Tous">Toutes les catégories</option>
@@ -421,6 +426,95 @@ export default function ItemsView({
                 </Button>
               )}
             </div>
+          </div>
+
+          {/* Advanced filter toggle + panel */}
+          <div className="mb-6">
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl border text-[10px] font-black uppercase tracking-wider transition-colors ${
+                showAdvanced || activeFilterCount > 0
+                  ? 'bg-primary/10 border-primary text-primary'
+                  : 'border-border text-muted hover:bg-neutral-50 dark:hover:bg-neutral-200/50'
+              }`}
+            >
+              <Filter className="h-3.5 w-3.5" />
+              <span>Filtres avancés</span>
+              {activeFilterCount > 0 && (
+                <span className="bg-primary text-white dark:text-neutral-900 text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+              {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+
+            <AnimatePresence>
+              {showAdvanced && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="bg-surface p-4 rounded-3xl border-2 border-primary/20 shadow-xs text-xs mt-3">
+                    <div className="flex flex-wrap items-end gap-4">
+                      {/* Category */}
+                      <div>
+                        <label className="block text-[10px] text-muted font-black uppercase tracking-wider mb-1">Catégorie</label>
+                        <select
+                          value={advancedSearch.filters.category || 'Tous'}
+                          onChange={(e) => advancedSearch.setFilter('category', e.target.value === 'Tous' ? '' : e.target.value)}
+                          className="py-2.5 px-3 border border-border rounded-2xl text-xs font-bold bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden"
+                        >
+                          <option value="Tous">Toutes les catégories</option>
+                          {categories.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {/* Text search */}
+                      <div>
+                        <label className="block text-[10px] text-muted font-black uppercase tracking-wider mb-1">Recherche texte</label>
+                        <input
+                          type="text"
+                          placeholder="Nom ou référence..."
+                          value={advancedSearch.filters.textSearch || ''}
+                          onChange={(e) => advancedSearch.setFilter('textSearch', e.target.value)}
+                          className="py-2.5 px-3 border border-border rounded-2xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50"
+                        />
+                      </div>
+                      {/* Status filter */}
+                      <div>
+                        <label className="block text-[10px] text-muted font-black uppercase tracking-wider mb-1">Statut stock</label>
+                        <select
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value as 'all' | 'alert' | 'out')}
+                          className="py-2.5 px-3 border border-border rounded-2xl text-xs font-bold bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden"
+                        >
+                          <option value="all">Tous les articles</option>
+                          <option value="alert">Stock bas (alerte)</option>
+                          <option value="out">En rupture</option>
+                        </select>
+                      </div>
+                      {/* Reset */}
+                      <div>
+                        <button
+                          onClick={() => {
+                            advancedSearch.resetFilters();
+                            setStatusFilter('all');
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-2.5 rounded-2xl border border-border text-muted hover:text-foreground hover:bg-neutral-50 dark:hover:bg-neutral-200/50 text-[10px] font-black uppercase tracking-wider transition-colors"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          <span>Réinitialiser</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Catalog Grid/Table - Desktop */}
@@ -718,24 +812,24 @@ export default function ItemsView({
           </div>
         }
       >
-        <form id="add-item-form" onSubmit={handleAddSubmit} className="space-y-4 text-xs">
+        <form id="add-item-form" onSubmit={handleSubmit(onAddItemSubmit)} className="space-y-4 text-xs">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-muted font-bold mb-1">Référence / SKU *</label>
               <input
                 type="text"
                 placeholder="e.g. SOC-CPJ-42.5"
-                value={newItemRef}
-                onChange={(e) => setNewItemRef(e.target.value.toUpperCase())}
+                {...register('ref', {
+                  onChange: (e) => { e.target.value = e.target.value.toUpperCase(); },
+                })}
                 className="w-full border border-border p-2.5 rounded-xl font-mono focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30"
-                required
               />
+              {errors.ref && <p className="mt-1 text-xs text-danger">{errors.ref.message}</p>}
             </div>
             <div>
               <label className="block text-muted font-bold mb-1">Catégorie *</label>
               <select
-                value={newItemCategory}
-                onChange={(e) => setNewItemCategory(e.target.value as Category)}
+                {...register('category')}
                 className="w-full border border-border p-2.5 rounded-xl bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden font-bold"
               >
                 {categories.map(cat => (
@@ -750,11 +844,10 @@ export default function ItemsView({
             <input
               type="text"
               placeholder="e.g. Ciment SOCOCIM CPJ 42.5 (Sac 50kg)"
-              value={newItemName}
-              onChange={(e) => setNewItemName(e.target.value)}
+              {...register('name')}
               className="w-full border border-border p-2.5 rounded-xl focus:ring-2 focus:ring-primary focus:outline-hidden font-bold bg-neutral-50/50 dark:bg-neutral-200/30"
-              required
             />
+            {errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}
           </div>
 
           <div className="grid grid-cols-3 gap-3">
@@ -763,20 +856,19 @@ export default function ItemsView({
               <input
                 type="text"
                 placeholder="Sac, Barre, Litre, etc."
-                value={newItemUnit}
-                onChange={(e) => setNewItemUnit(e.target.value)}
+                {...register('unit')}
                 className="w-full border border-border p-2.5 rounded-xl focus:ring-2 focus:ring-primary focus:outline-hidden font-bold bg-neutral-50/50 dark:bg-neutral-200/30"
               />
+              {errors.unit && <p className="mt-1 text-xs text-danger">{errors.unit.message}</p>}
             </div>
             <div>
               <label className="block text-muted font-bold mb-1">Stock de Sécurité *</label>
               <input
                 type="number"
-                value={newItemMinStock}
-                onChange={(e) => setNewItemMinStock(Number(e.target.value))}
+                {...register('minStock', { valueAsNumber: true })}
                 className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30"
-                required
               />
+              {errors.minStock && <p className="mt-1 text-xs text-danger">{errors.minStock.message}</p>}
             </div>
             <div>
               <label className="block text-muted font-bold mb-1">Stock Initial</label>
@@ -794,21 +886,19 @@ export default function ItemsView({
               <label className="block text-muted font-bold mb-1">Prix d'Achat Unitaire (FCFA) *</label>
               <input
                 type="number"
-                value={newItemBuying}
-                onChange={(e) => setNewItemBuying(Number(e.target.value))}
+                {...register('buyingPrice', { valueAsNumber: true })}
                 className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30 text-foreground"
-                required
               />
+              {errors.buyingPrice && <p className="mt-1 text-xs text-danger">{errors.buyingPrice.message}</p>}
             </div>
             <div>
               <label className="block text-muted font-bold mb-1">Prix de Vente Unitaire (FCFA) *</label>
               <input
                 type="number"
-                value={newItemSelling}
-                onChange={(e) => setNewItemSelling(Number(e.target.value))}
+                {...register('sellingPrice', { valueAsNumber: true })}
                 className="w-full border border-border p-2.5 rounded-xl font-mono font-black focus:ring-2 focus:ring-primary focus:outline-hidden bg-neutral-50/50 dark:bg-neutral-200/30 text-foreground"
-                required
               />
+              {errors.sellingPrice && <p className="mt-1 text-xs text-danger">{errors.sellingPrice.message}</p>}
             </div>
           </div>
 
@@ -816,8 +906,7 @@ export default function ItemsView({
             <label className="block text-muted font-bold mb-1">Description</label>
             <textarea
               placeholder="Détails additionnels du produit..."
-              value={newItemDesc}
-              onChange={(e) => setNewItemDesc(e.target.value)}
+              {...register('description')}
               className="w-full border border-border p-2.5 rounded-xl h-20 focus:ring-2 focus:ring-primary focus:outline-hidden font-medium bg-neutral-50/50 dark:bg-neutral-200/30"
             />
           </div>

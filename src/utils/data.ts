@@ -200,7 +200,7 @@ export const INITIAL_SUPPLIERS: Supplier[] = [
 export const INITIAL_QUOTES: Quote[] = [
   {
     id: "q-1",
-    number: "DEV-2026-001",
+    number: `DEV-${new Date().getFullYear()}-001`,
     date: "2026-06-28",
     expiryDate: "2026-07-28",
     customerId: "cust-1",
@@ -232,7 +232,7 @@ export const INITIAL_QUOTES: Quote[] = [
   },
   {
     id: "q-2",
-    number: "DEV-2026-002",
+    number: `DEV-${new Date().getFullYear()}-002`,
     date: "2026-07-02",
     expiryDate: "2026-08-02",
     customerId: "cust-3",
@@ -264,7 +264,7 @@ export const INITIAL_QUOTES: Quote[] = [
   },
   {
     id: "q-3",
-    number: "DEV-2026-003",
+    number: `DEV-${new Date().getFullYear()}-003`,
     date: "2026-07-05",
     expiryDate: "2026-08-05",
     customerId: "cust-2",
@@ -299,7 +299,7 @@ export const INITIAL_QUOTES: Quote[] = [
 export const INITIAL_INVOICES: Invoice[] = [
   {
     id: "fac-1",
-    number: "FAC-2026-001",
+    number: `FAC-${new Date().getFullYear()}-001`,
     date: "2026-06-25",
     customerId: "cust-4",
     customerName: "Abdoulaye Diallo",
@@ -332,7 +332,7 @@ export const INITIAL_INVOICES: Invoice[] = [
   },
   {
     id: "fac-2",
-    number: "FAC-2026-002",
+    number: `FAC-${new Date().getFullYear()}-002`,
     date: "2026-06-29",
     customerId: "cust-1",
     customerName: "Mamadou Diop",
@@ -365,7 +365,7 @@ export const INITIAL_INVOICES: Invoice[] = [
   },
   {
     id: "fac-3",
-    number: "FAC-2026-07-01",
+    number: `FAC-${new Date().getFullYear()}-07-01`,
     date: "2026-07-01",
     customerId: "cust-3",
     customerName: "Amadou Sow (Maçon)",

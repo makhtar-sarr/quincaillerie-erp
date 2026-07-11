@@ -15,3 +15,6 @@ qa-*.png
 
 # Build artifacts
 artifacts/
+
+# SQLite temp files
+src-tauri/:memory

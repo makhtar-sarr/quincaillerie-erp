@@ -10,7 +10,7 @@ Système de gestion (React 19 + Vite) pour quincailleries sénégalaises : stock
 - `npm run preview` — `vite preview` (preview production build locally)
 - `npm run lint` — **there is no real linter**; this script is just `tsc --noEmit` (type-check only)
 - `npm run clean` — removes `dist/` and `server.js` (generated AI Studio artifact)
-- No test suite exists. Do not add test commands expecting one.
+- `npm run test` — vitest (89 tests: utilities + business logic with better-sqlite3 mirror)
 
 ## Architecture
 
@@ -70,6 +70,26 @@ All in `src/components/ui/`:
 - `firestore.rules` makes backups **immutable**: `create`/`delete`/`list`/`get` allowed but `update: if false`. A backup must contain exactly 7 keys under `data` (settings, items, movements, customers, suppliers, quotes, invoices) or writes are rejected.
 - Firebase init is wrapped in try/catch and exposes `isFirebaseAvailable`; callers must handle the offline/unavailable case.
 - `firebase-blueprint.json` declares the Firestore schema for AI Studio's integration layer.
+
+## Testing
+
+- **vitest** runs via `npm run test` (`vitest run`). 89 tests across 11 files: utilities + business logic.
+- **`better-sqlite3` is a devDependency only** — never imported in `src/` runtime code. Tests that need a node environment declare `// @vitest-environment node` at the top of the file.
+- Test files use explicit imports (`import { it, expect } from 'vitest'`), not globals.
+- Business logic is mirrored against a better-sqlite3 in-memory DB in `src/lib/__tests__/business.*` to validate invoicing/stock side effects.
+
+## Features added (phases 3-6)
+
+- **Zod + React Hook Form validation** on all 5 forms (Items, Quotes, Invoices, Contacts, Settings). Schemas in `@/lib/validation` (or co-located), wired via `@hookform/resolvers/zod`.
+- **Advanced search** via the `useAdvancedSearch` hook (filtering across items, invoices, customers, etc.).
+- **Audit trail** — advisory only, stored in localStorage. It is NOT tamper-proof; do not treat it as a security log.
+- **Financial charts** via `recharts` (cashflow, margin, donut) on the dashboard.
+- **Customer reminders** — flags invoices >30 days overdue.
+
+### Intentionally excluded (this phase)
+
+- **Barcode scanner** — not implemented.
+- **Multi-currency** — FCFA only, by design. Do not add currency conversion.
 
 ## Environment & AI Studio quirks
 

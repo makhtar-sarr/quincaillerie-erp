@@ -4,6 +4,7 @@
 // `lib.rs` via `tauri::generate_handler!`. Keep this list in sync with the
 // modules on disk.
 
+pub mod audit;
 pub mod customers;
 pub mod invoices;
 pub mod items;

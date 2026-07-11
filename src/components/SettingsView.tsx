@@ -35,7 +35,11 @@ import type { StoreState } from '@/context/StoreContext';
 import { toast } from 'sonner';
 import { useCloudBackups } from '../hooks/useCloudBackups';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { useTheme } from '@/hooks/useTheme';
+import { useForm, type SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { settingsSchema, type SettingsInput } from '@/schemas/settings';
 import { useAuth } from '@/context/AuthContext';
 
 interface SettingsViewProps {
@@ -77,30 +81,26 @@ export default function SettingsView({
     return null;
   }
 
-  // Store Settings Form state
-  const [storeName, setStoreName] = useState(settings.storeName);
-  const [address, setAddress] = useState(settings.address);
-  const [phone, setPhone] = useState(settings.phone);
-  const [email, setEmail] = useState(settings.email);
-  const [ninea, setNinea] = useState(settings.ninea);
-  const [rc, setRc] = useState(settings.rc);
-  const [tvaRate, setTvaRate] = useState(settings.tvaRate);
   const [saved, setSaved] = useState(false);
+
+  const { register, handleSubmit, formState: { errors } } = useForm<SettingsInput>({
+    resolver: zodResolver(settingsSchema),
+    defaultValues: {
+      storeName: settings.storeName,
+      address: settings.address,
+      phone: settings.phone,
+      email: settings.email,
+      ninea: settings.ninea,
+      rc: settings.rc,
+      tvaRate: settings.tvaRate,
+      currency: 'FCFA',
+    },
+  });
 
   const { mode, setMode } = useTheme();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onUpdateSettings({
-      storeName,
-      address,
-      phone,
-      email,
-      ninea,
-      rc,
-      tvaRate: Number(tvaRate),
-      currency: settings.currency
-    });
+  const onSubmit: SubmitHandler<SettingsInput> = (data) => {
+    onUpdateSettings(data);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -203,7 +203,7 @@ export default function SettingsView({
         
         {/* LEFT COLUMN: Local settings form */}
         <div className="lg:col-span-7 space-y-6">
-          <form onSubmit={handleSubmit} className="bg-surface rounded-[2rem] border-2 border-border shadow-xs p-6 space-y-6 text-xs">
+          <form onSubmit={handleSubmit(onSubmit)} className="bg-surface rounded-[2rem] border-2 border-border shadow-xs p-6 space-y-6 text-xs">
             {saved && (
               <div className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200 p-3.5 rounded-2xl border border-emerald-100 dark:border-emerald-800 flex items-center space-x-2 font-bold">
                 <CheckCircle className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -220,46 +220,36 @@ export default function SettingsView({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-muted font-bold mb-1">Raison Sociale / Nom Enseigne *</label>
-                  <input
-                    type="text"
-                    value={storeName}
-                    onChange={(e) => setStoreName(e.target.value)}
-                    className="w-full border border-border p-2.5 rounded-xl font-bold text-foreground text-xs focus:ring-2 focus:ring-primary focus:outline-hidden"
-                    required
+                  <Input
+                    label="Raison Sociale / Nom Enseigne *"
+                    error={errors.storeName?.message}
+                    {...register('storeName')}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-muted font-bold mb-1">Téléphone(s) *</label>
-                  <input
-                    type="text"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
-                    required
+                  <Input
+                    label="Téléphone(s) *"
+                    className="font-mono font-bold"
+                    error={errors.phone?.message}
+                    {...register('phone')}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-muted font-bold mb-1">Adresse Email *</label>
-                  <input
+                  <Input
+                    label="Adresse Email *"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border border-border p-2.5 rounded-xl font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
-                    required
+                    error={errors.email?.message}
+                    {...register('email')}
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-muted font-bold mb-1">Adresse Physique (Dakar, Sénégal) *</label>
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="w-full border border-border p-2.5 rounded-xl font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
-                    required
+                  <Input
+                    label="Adresse Physique (Dakar, Sénégal) *"
+                    error={errors.address?.message}
+                    {...register('address')}
                   />
                 </div>
               </div>
@@ -274,42 +264,37 @@ export default function SettingsView({
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-muted font-bold mb-1">N° NINEA *</label>
-                  <input
-                    type="text"
+                  <Input
+                    label="N° NINEA *"
                     placeholder="e.g. 001234567-2G3"
-                    value={ninea}
-                    onChange={(e) => setNinea(e.target.value)}
-                    className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
-                    required
+                    className="font-mono font-bold"
+                    error={errors.ninea?.message}
+                    {...register('ninea')}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-muted font-bold mb-1">N° Registre Commerce *</label>
-                  <input
-                    type="text"
+                  <Input
+                    label="N° Registre Commerce *"
                     placeholder="e.g. SN-DKR-24-B-854"
-                    value={rc}
-                    onChange={(e) => setRc(e.target.value)}
-                    className="w-full border border-border p-2.5 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
-                    required
+                    className="font-mono font-bold"
+                    error={errors.rc?.message}
+                    {...register('rc')}
                   />
                 </div>
 
                 <div>
                   <label className="block text-muted font-bold mb-1">TVA (%) *</label>
                   <div className="relative">
-                    <input
+                    <Input
                       type="number"
                       min="0"
                       max="100"
-                      value={tvaRate}
-                      onChange={(e) => setTvaRate(Number(e.target.value))}
-                      className="w-full border border-border p-2.5 pr-8 rounded-xl font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
-                      required
+                      className="pr-8 font-mono font-bold"
+                      error={errors.tvaRate?.message}
+                      {...register('tvaRate', { valueAsNumber: true })}
                     />
-                    <Percent className="absolute right-3 top-3 h-4 w-4 text-muted" />
+                    <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none" />
                   </div>
                 </div>
               </div>

@@ -1,7 +1,26 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Item, Customer, Invoice, LineItem } from '../types';
-import { useLineItems } from './useLineItems';
+import { invoiceSchema } from '../schemas/invoice';
+import { computeInvoiceTotals } from '../lib/calc';
+import { TAX_RATE } from '../utils/vat';
 import { toast } from 'sonner';
+
+/** Form schema: drop fields that are computed or not present in the form UI. */
+const invoiceFormSchema = invoiceSchema.omit({
+  id: true,
+  number: true,
+  customerName: true,
+  subtotal: true,
+  tax: true,
+  total: true,
+  status: true,
+  quoteId: true,
+});
+
+type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
 
 export interface UseInvoiceFormReturn {
   /** Line items in the invoice */
@@ -30,6 +49,9 @@ export interface UseInvoiceFormReturn {
   /** Amount paid by customer (FCFA) */
   amountPaid: number;
 
+  /** Field-level validation errors from Zod */
+  fieldErrors: Record<string, string>;
+
   // Setters
   setCustomerId: (id: string) => void;
   setInvoiceDate: (date: string) => void;
@@ -46,17 +68,31 @@ export interface UseInvoiceFormReturn {
   handleTempProductChange: (itemId: string) => void;
   handleAddLine: () => boolean;
   removeLine: (index: number) => void;
-  handleSaveInvoice: () => boolean;
+  handleSaveInvoice: () => Promise<boolean>;
   resetForm: () => void;
 }
+
+function today(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+const defaultFormValues: InvoiceFormValues = {
+  date: today(),
+  customerId: '',
+  items: [],
+  discount: 0,
+  amountPaid: 0,
+  paymentMethod: 'Espèces',
+  notes: '',
+};
 
 /**
  * Hook that manages invoice creation wizard form state.
  *
- * Composes `useLineItems(items, { validateStock: true })` for line item
- * management and adds invoice-specific fields (customerId, date, payment,
- * amountPaid). Handles validation, status determination, and the final
- * `onAddInvoice` call.
+ * Uses React Hook Form + Zod (via `zodResolver`) for validation and
+ * `useFieldArray` for line item management. Keeps `operator`, `tempItemId`,
+ * `tempQty`, and `tempPrice` as local `useState` since they aren't part of
+ * the `Invoice` domain model / form schema.
  */
 export function useInvoiceForm(
   items: Item[],
@@ -64,100 +100,225 @@ export function useInvoiceForm(
   onAddInvoice: (invoice: Omit<Invoice, 'id' | 'number'>, operator: string) => void,
 ): UseInvoiceFormReturn {
   const {
-    lines,
-    tempItemId,
-    setTempItemId,
-    tempQty,
-    setTempQty,
-    tempPrice,
-    setTempPrice,
-    discount,
-    setDiscount,
-    operator,
-    setOperator,
-    notes,
-    setNotes,
-    handleTempProductChange,
-    handleAddLine,
-    removeLine,
-    reset: resetLineItems,
-    totals,
-  } = useLineItems(items, { validateStock: true });
+    control,
+    watch,
+    setValue,
+    getValues,
+    trigger,
+    reset,
+    formState: { errors },
+  } = useForm<InvoiceFormValues>({
+    resolver: zodResolver(invoiceFormSchema),
+    defaultValues: defaultFormValues,
+    mode: 'onBlur',
+  });
 
-  const [customerId, setCustomerId] = useState('');
-  const [invoiceDate, setInvoiceDate] = useState(
-    () => new Date().toISOString().split('T')[0],
+  const { fields, append, update, remove: removeField } = useFieldArray({
+    control,
+    name: 'items',
+  });
+
+  const [tempItemId, setTempItemId] = useState('');
+  const [tempQty, setTempQty] = useState(1);
+  const [tempPrice, setTempPrice] = useState(0);
+  const [operator, setOperator] = useState('');
+
+  const customerId = watch('customerId') ?? '';
+  const invoiceDate = watch('date') ?? '';
+  const paymentMethod = watch('paymentMethod') ?? 'Espèces';
+  const amountPaid = watch('amountPaid') ?? 0;
+  const discount = watch('discount') ?? 0;
+  const notes = watch('notes') ?? '';
+
+  const setCustomerId = useCallback(
+    (id: string) => setValue('customerId', id, { shouldValidate: true }),
+    [setValue],
   );
-  const [paymentMethod, setPaymentMethod] =
-    useState<Invoice['paymentMethod']>('Espèces');
-  const [amountPaid, setAmountPaid] = useState<number>(0);
+  const setInvoiceDate = useCallback(
+    (date: string) => setValue('date', date, { shouldValidate: true }),
+    [setValue],
+  );
+  const setPaymentMethod = useCallback(
+    (method: Invoice['paymentMethod']) =>
+      setValue('paymentMethod', method, { shouldValidate: true }),
+    [setValue],
+  );
+  const setAmountPaid = useCallback(
+    (val: number) =>
+      setValue('amountPaid', isNaN(val) ? 0 : Math.max(0, val), {
+        shouldValidate: true,
+      }),
+    [setValue],
+  );
+  const setDiscount = useCallback(
+    (val: number) =>
+      setValue('discount', isNaN(val) ? 0 : Math.max(0, val), {
+        shouldValidate: true,
+      }),
+    [setValue],
+  );
+  const setNotes = useCallback(
+    (val: string) => setValue('notes', val, { shouldValidate: true }),
+    [setValue],
+  );
 
-  // Automatically keep amountPaid in sync with the computed total
-  // (cashiers can still override if needed).
+  const lines = useMemo(
+    () =>
+      fields.map((f) => ({
+        itemId: f.itemId,
+        itemName: f.itemName,
+        unit: f.unit,
+        quantity: f.quantity,
+        price: f.price,
+        total: f.total,
+      })) as LineItem[],
+    [fields],
+  );
+
+  const watchedItems = watch('items') ?? [];
+  const watchedDiscount = watch('discount') ?? 0;
+
+  const totals = useMemo(
+    () => computeInvoiceTotals(watchedItems, watchedDiscount, TAX_RATE),
+    [watchedItems, watchedDiscount],
+  );
+
   useEffect(() => {
-    setAmountPaid(totals.total);
-  }, [totals.total]);
+    setValue('amountPaid', totals.total);
+  }, [totals.total, setValue]);
 
-  const handleSaveInvoice = useCallback((): boolean => {
-    if (!customerId) {
-      toast.error('Veuillez choisir un client.');
+  const fieldErrors = useMemo((): Record<string, string> => {
+    const map: Record<string, string> = {};
+    const fe = errors;
+
+    if (fe.customerId?.message) map.customerId = fe.customerId.message;
+    if (fe.paymentMethod?.message) map.paymentMethod = fe.paymentMethod.message;
+    if (fe.amountPaid?.message) map.amountPaid = fe.amountPaid.message;
+    if (fe.discount?.message) map.discount = fe.discount.message;
+    if (fe.date?.message) map.date = fe.date.message;
+
+    if (fe.items) {
+      if (!Array.isArray(fe.items)) {
+        if (fe.items.message) map.items = fe.items.message;
+      } else {
+        fe.items.forEach((itemErr: any, idx: number) => {
+          if (itemErr?.quantity?.message)
+            map[`items.${idx}.quantity`] = itemErr.quantity.message;
+          if (itemErr?.price?.message)
+            map[`items.${idx}.price`] = itemErr.price.message;
+        });
+      }
+    }
+
+    return map;
+  }, [errors]);
+
+  const handleTempProductChange = useCallback(
+    (itemId: string) => {
+      setTempItemId(itemId);
+      const item = items.find((i) => i.id === itemId);
+      if (item) {
+        setTempPrice(item.sellingPrice);
+      }
+    },
+    [items],
+  );
+
+  const handleAddLine = useCallback((): boolean => {
+    if (!tempItemId) return false;
+    const item = items.find((i) => i.id === tempItemId);
+    if (!item) return false;
+
+    if (tempQty > item.stockCount) {
+      toast.error(`Stock insuffisant ! Stock disponible : ${item.stockCount} ${item.unit}s.`);
       return false;
     }
-    if (lines.length === 0) {
-      toast.error('Veuillez ajouter des articles avant de valider la vente.');
-      return false;
+
+    const price = tempPrice || item.sellingPrice;
+
+    const currentItems: LineItem[] = getValues('items') ?? [];
+    const existingIdx = currentItems.findIndex(
+      (l) => l.itemId === tempItemId,
+    );
+
+    if (existingIdx > -1) {
+      const newQty = currentItems[existingIdx].quantity + tempQty;
+      if (newQty > item.stockCount) {
+        toast.error(`Stock insuffisant en cumulant ! Stock disponible : ${item.stockCount} ${item.unit}s.`);
+        return false;
+      }
+      update(existingIdx, {
+        ...currentItems[existingIdx],
+        quantity: newQty,
+        total: newQty * price,
+      });
+    } else {
+      append({
+        itemId: tempItemId,
+        itemName: item.name,
+        unit: item.unit,
+        quantity: tempQty,
+        price,
+        total: tempQty * price,
+      });
     }
 
-    const customerObj = customers.find((c) => c.id === customerId);
+    setTempItemId('');
+    setTempQty(1);
+    setTempPrice(0);
+    return true;
+  }, [tempItemId, tempQty, tempPrice, items, append, update, getValues]);
+
+  const removeLine = useCallback(
+    (index: number) => {
+      removeField(index);
+    },
+    [removeField],
+  );
+
+  const resetForm = useCallback(() => {
+    reset(defaultFormValues);
+    setTempItemId('');
+    setTempQty(1);
+    setTempPrice(0);
+    setOperator('');
+  }, [reset]);
+
+  const handleSaveInvoice = useCallback(async (): Promise<boolean> => {
+    const isValid = await trigger();
+    if (!isValid) return false;
+
+    const values = getValues();
+    const customerObj = customers.find((c) => c.id === values.customerId);
     if (!customerObj) return false;
 
     let invoiceStatus: Invoice['status'] = 'Payé';
-    if (amountPaid === 0) {
+    if (values.amountPaid === 0) {
       invoiceStatus = 'Non Payé';
-    } else if (amountPaid < totals.total) {
+    } else if (values.amountPaid < totals.total) {
       invoiceStatus = 'Partiel';
     }
 
     onAddInvoice(
       {
-        date: invoiceDate,
+        date: values.date,
         customerId: customerObj.id,
         customerName: customerObj.name,
         items: [...lines],
         subtotal: totals.subtotal,
-        discount,
+        discount: values.discount,
         tax: totals.tax,
         total: totals.total,
-        amountPaid,
-        paymentMethod,
+        amountPaid: values.amountPaid,
+        paymentMethod: values.paymentMethod,
         status: invoiceStatus,
-        notes,
+        notes: values.notes,
       },
       operator,
     );
 
     return true;
-  }, [
-    customerId,
-    lines,
-    customers,
-    amountPaid,
-    totals,
-    invoiceDate,
-    discount,
-    paymentMethod,
-    notes,
-    operator,
-    onAddInvoice,
-  ]);
-
-  const resetForm = useCallback(() => {
-    setCustomerId('');
-    setInvoiceDate(new Date().toISOString().split('T')[0]);
-    setPaymentMethod('Espèces');
-    setAmountPaid(0);
-    resetLineItems();
-  }, [resetLineItems]);
+  }, [customers, lines, totals, operator, onAddInvoice, trigger, getValues]);
 
   return {
     lines,
@@ -172,6 +333,8 @@ export function useInvoiceForm(
     invoiceDate,
     paymentMethod,
     amountPaid,
+    fieldErrors,
+
     setCustomerId,
     setInvoiceDate,
     setPaymentMethod,
@@ -182,6 +345,7 @@ export function useInvoiceForm(
     setDiscount,
     setOperator,
     setNotes,
+
     handleTempProductChange,
     handleAddLine,
     removeLine,
