@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Item, LineItem } from '../types';
-import { calculateVAT } from '../utils/vat';
+import { TAX_RATE } from '../utils/vat';
+import { computeInvoiceTotals } from '../lib/calc';
 import { toast } from 'sonner';
 
 interface UseLineItemsOptions {
@@ -82,11 +83,7 @@ export function useLineItems(items: Item[], options?: UseLineItemsOptions) {
   }, []);
 
   const totals = useMemo(() => {
-    const subtotal = lines.reduce((acc, line) => acc + line.total, 0);
-    const taxedAmount = Math.max(0, subtotal - discount);
-    const tax = calculateVAT(taxedAmount);
-    const total = taxedAmount + tax;
-    return { subtotal, tax, total };
+    return computeInvoiceTotals(lines, discount, TAX_RATE);
   }, [lines, discount]);
 
   return {

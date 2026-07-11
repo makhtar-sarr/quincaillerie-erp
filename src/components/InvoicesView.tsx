@@ -698,7 +698,7 @@ export default function InvoicesView({
                   <label className="block text-muted font-bold mb-1">Mode de règlement *</label>
                   <select
                     value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value as any)}
+                    onChange={(e) => setPaymentMethod(e.target.value as Invoice['paymentMethod'])}
                     className="w-full border border-border p-2.5 rounded-xl bg-surface focus:ring-2 focus:ring-primary focus:outline-hidden text-xs font-bold"
                   >
                     <option value="Espèces">Espèces (Cash)</option>

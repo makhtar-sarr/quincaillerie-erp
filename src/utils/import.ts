@@ -46,7 +46,7 @@ function parseCSVLine(line: string): string[] {
 }
 
 function generateId(index: number): string {
-  return `prod-import-${Date.now()}-${index}`;
+  return `prod-import-${crypto.randomUUID()}-${index}`;
 }
 
 function findHeaderIndex(headers: string[], name: string): number {

@@ -808,7 +808,7 @@ export default function DevisView({
                 <label className="block text-muted font-bold mb-1">Mode de Paiement de la facture *</label>
                 <select
                   value={convertPaymentMethod}
-                  onChange={(e) => setConvertPaymentMethod(e.target.value as any)}
+                  onChange={(e) => setConvertPaymentMethod(e.target.value as 'Espèces' | 'Wave' | 'Orange Money' | 'Chèque' | 'Virement')}
                   className="w-full border border-border p-2.5 rounded-xl bg-surface font-bold focus:ring-2 focus:ring-primary focus:outline-hidden"
                 >
                   <option value="Espèces">Espèces (Comptoir)</option>

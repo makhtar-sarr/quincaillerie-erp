@@ -8,6 +8,7 @@ import {
   CloudBackup
 } from '../lib/firebase';
 import { toast } from 'sonner';
+import { restoreAll, StoreState } from '../lib/storageAdapter';
 
 export interface CloudBackupData {
   settings: StoreSettings;
@@ -87,13 +88,7 @@ export function useCloudBackups(
     }
   }, [backupLabel, backupOperator, data, loadBackupsList]);
 
-  const handleRestoreBackup = useCallback((backup: CloudBackup) => {
-    const confirmation = window.confirm(
-      `ATTENTION: Vous êtes sur le point de restaurer la sauvegarde "${backup.label}" du ${new Date(backup.createdAt).toLocaleString('fr-FR')}.\n\nCela va ÉCRASER toutes vos données locales actuelles (stocks, clients, factures, devis, etc.). Cette opération est irréversible.\n\nVoulez-vous continuer ?`
-    );
-
-    if (!confirmation) return;
-
+  const executeRestore = useCallback((backup: CloudBackup) => {
     try {
       const unpacked = backup.data;
       if (!unpacked) {
@@ -101,7 +96,7 @@ export function useCloudBackups(
         return;
       }
 
-      onRestoreAllData({
+      const storeState: StoreState = {
         settings: unpacked.settings || data.settings,
         items: unpacked.items || [],
         movements: unpacked.movements || [],
@@ -109,6 +104,18 @@ export function useCloudBackups(
         suppliers: unpacked.suppliers || [],
         quotes: unpacked.quotes || [],
         invoices: unpacked.invoices || []
+      };
+
+      restoreAll(storeState);
+
+      onRestoreAllData({
+        settings: storeState.settings,
+        items: storeState.items,
+        movements: storeState.movements,
+        customers: storeState.customers,
+        suppliers: storeState.suppliers,
+        quotes: storeState.quotes,
+        invoices: storeState.invoices
       });
 
       setCloudStatusMsg({
@@ -121,10 +128,18 @@ export function useCloudBackups(
     }
   }, [data.settings, onRestoreAllData]);
 
-  const handleDeleteBackup = useCallback(async (id: string, label: string) => {
-    const confirmation = window.confirm(`Supprimer définitivement la sauvegarde "${label}" du Cloud ?`);
-    if (!confirmation) return;
+  const handleRestoreBackup = useCallback((backup: CloudBackup) => {
+    const confirmMessage = `ATTENTION: Vous êtes sur le point de restaurer la sauvegarde "${backup.label}" du ${new Date(backup.createdAt).toLocaleString('fr-FR')}. Ceci écrasera toutes vos données locales.`;
 
+    toast.warning(confirmMessage, {
+      action: {
+        label: 'Confirmer',
+        onClick: () => executeRestore(backup),
+      },
+    });
+  }, [executeRestore]);
+
+  const executeDelete = useCallback(async (id: string) => {
     try {
       await deleteBackupFromCloud(id);
       setCloudStatusMsg({ type: 'success', text: "Sauvegarde supprimée du Cloud." });
@@ -134,6 +149,17 @@ export function useCloudBackups(
       setCloudStatusMsg({ type: 'error', text: err.message || "Impossible de supprimer la sauvegarde." });
     }
   }, [loadBackupsList]);
+
+  const handleDeleteBackup = useCallback(async (id: string, label: string) => {
+    const confirmMessage = `Supprimer définitivement la sauvegarde "${label}" du Cloud ?`;
+
+    toast.warning(confirmMessage, {
+      action: {
+        label: 'Supprimer',
+        onClick: () => executeDelete(id),
+      },
+    });
+  }, [executeDelete]);
 
   return {
     backups,

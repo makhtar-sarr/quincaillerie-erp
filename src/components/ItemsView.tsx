@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { 
   Download,
+  Upload,
   Package, 
   Search, 
   Plus, 
@@ -403,6 +404,11 @@ export default function ItemsView({
                 <Download className="w-4 h-4" />
                 <span>Exporter CSV</span>
               </Button>
+              <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="w-4 h-4" />
+                <span>Importer CSV</span>
+              </Button>
+              <input type="file" ref={fileInputRef} accept=".csv" onChange={handleImportCSV} className="hidden" />
               {!isVendeur && (
                 <Button
                   variant="primary"
