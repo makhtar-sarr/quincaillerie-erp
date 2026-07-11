@@ -47,32 +47,56 @@ export function Modal({
 }: ModalProps) {
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // Views pass an inline arrow for onClose (e.g. onClose={() => setIsOpen(false)}),
+  // which gets a NEW identity on every parent render. Reading it through a ref
+  // keeps effects from re-running (and stealing focus) on each re-render.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  // Tracks the open transition so auto-focus fires ONCE on open, not on every render.
+  const wasOpen = useRef(false);
+
   useEffect(() => {
     if (!isOpen) return;
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseRef.current();
     }
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      wasOpen.current = false;
+      return;
+    }
+    // Only auto-focus when the modal opens (false -> true). Re-rendering on each
+    // keystroke must NOT re-trigger this, or focus gets yanked off the field being typed in.
+    if (wasOpen.current) return;
+    wasOpen.current = true;
 
     const timer = setTimeout(() => {
       const container = contentRef.current;
       if (!container) return;
 
-      const focusable = container.querySelector<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      // Prefer the first form field over the header's close button.
+      const field = container.querySelector<HTMLElement>(
+        'input:not([type="hidden"]), select, textarea'
       );
+      const focusable =
+        field ??
+        container.querySelector<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
       focusable?.focus();
     }, 50);
 
     return () => clearTimeout(timer);
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   return (
     <AnimatePresence>
