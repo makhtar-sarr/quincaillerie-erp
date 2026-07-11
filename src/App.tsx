@@ -5,9 +5,32 @@ import { Item, StockMovement, Customer, Supplier, Quote, Invoice, StoreSettings 
 import { StoreProvider, useStore } from './context/StoreContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { useIdGenerator } from './hooks/useIdGenerator';
+import { applyDebtPayment } from '@/lib/calc';
 import Layout from './components/Layout';
 import AppRoutes from './routes';
 import { Toaster } from './components/ui/Toast';
+
+import {
+  addItem,
+  updateItem,
+  deleteItem,
+  addMovement,
+  addInvoice,
+  deleteInvoice,
+  convertQuote,
+  addCustomer,
+  updateCustomer,
+  deleteCustomer,
+  addSupplier,
+  updateSupplier,
+  deleteSupplier,
+  addQuote,
+  updateQuoteStatus,
+  deleteQuote,
+  saveSettings,
+  restoreAll,
+  getNextNumber,
+} from './lib/storageAdapter';
 
 export default function App() {
   return (
@@ -40,7 +63,7 @@ function AppContent() {
     navigate(pathMap[view] || '/dashboard');
   };
 
-  const handleAddItem = (itemData: Omit<Item, 'id' | 'stockCount'>, initialQty: number, operator: string) => {
+  const handleAddItem = async (itemData: Omit<Item, 'id' | 'stockCount'>, initialQty: number, operator: string) => {
     const newId = generateId('prod');
     const newItem: Item = {
       ...itemData,
@@ -48,7 +71,8 @@ function AppContent() {
       stockCount: initialQty
     };
 
-    dispatch({ type: 'SET_ITEMS', payload: [...items, newItem] });
+    const saved = await addItem(newItem);
+    dispatch({ type: 'SET_ITEMS', payload: [...items, saved] });
 
     if (initialQty > 0) {
       const newMovement: StockMovement = {
@@ -62,20 +86,23 @@ function AppContent() {
         referenceCode: 'INIT-INVENTAIRE',
         operator
       };
-      dispatch({ type: 'SET_MOVEMENTS', payload: [newMovement, ...movements] });
+      const savedMovement = await addMovement(newMovement);
+      dispatch({ type: 'SET_MOVEMENTS', payload: [savedMovement, ...movements] });
     }
   };
 
-  const handleUpdateItem = (updatedItem: Item) => {
-    dispatch({ type: 'SET_ITEMS', payload: items.map(i => i.id === updatedItem.id ? updatedItem : i) });
+  const handleUpdateItem = async (updatedItem: Item) => {
+    const saved = await updateItem(updatedItem);
+    dispatch({ type: 'SET_ITEMS', payload: items.map(i => i.id === saved.id ? saved : i) });
   };
 
-  const handleDeleteItem = (id: string) => {
+  const handleDeleteItem = async (id: string) => {
+    await deleteItem(id);
     dispatch({ type: 'SET_ITEMS', payload: items.filter(i => i.id !== id) });
     dispatch({ type: 'SET_MOVEMENTS', payload: movements.filter(m => m.itemId !== id) });
   };
 
-  const handleAdjustStock = (
+  const handleAdjustStock = async (
     itemId: string,
     qty: number,
     type: 'ENTREE' | 'SORTIE',
@@ -87,8 +114,10 @@ function AppContent() {
     if (!itemObj) return;
 
     const newStockCount = type === 'ENTREE' ? itemObj.stockCount + qty : Math.max(0, itemObj.stockCount - qty);
+    const updatedItem: Item = { ...itemObj, stockCount: newStockCount };
 
-    dispatch({ type: 'SET_ITEMS', payload: items.map(i => i.id === itemId ? { ...i, stockCount: newStockCount } : i) });
+    const savedItem = await updateItem(updatedItem);
+    dispatch({ type: 'SET_ITEMS', payload: items.map(i => i.id === itemId ? savedItem : i) });
 
     const newMovement: StockMovement = {
       id: generateId('mov'),
@@ -101,178 +130,109 @@ function AppContent() {
       referenceCode: ref || "AJUST-MANUEL",
       operator
     };
-    dispatch({ type: 'SET_MOVEMENTS', payload: [newMovement, ...movements] });
+    const savedMovement = await addMovement(newMovement);
+    dispatch({ type: 'SET_MOVEMENTS', payload: [savedMovement, ...movements] });
   };
 
   const handleQuickRestock = (itemId: string, qty: number) => {
     handleAdjustStock(itemId, qty, 'ENTREE', 'Achat Fournisseur', 'Système (Auto)', 'REAPPRO-RAPIDE');
   };
 
-  const handleAddQuote = (quoteData: Omit<Quote, 'id' | 'number'>) => {
-    const nextNumber = `DEV-2026-${String(quotes.length + 1).padStart(3, '0')}`;
+  const handleAddQuote = async (quoteData: Omit<Quote, 'id' | 'number'>) => {
+    const year = new Date(quoteData.date).getFullYear();
+    const nextNumber = await getNextNumber('DEV', year);
     const newQuote: Quote = {
       ...quoteData,
       id: generateId('q'),
       number: nextNumber
     };
-    dispatch({ type: 'SET_QUOTES', payload: [newQuote, ...quotes] });
+    const saved = await addQuote(newQuote, 'Système');
+    dispatch({ type: 'SET_QUOTES', payload: [saved, ...quotes] });
   };
 
-  const handleUpdateQuoteStatus = (id: string, status: Quote['status']) => {
-    dispatch({ type: 'SET_QUOTES', payload: quotes.map(q => q.id === id ? { ...q, status } : q) });
+  const handleUpdateQuoteStatus = async (id: string, status: Quote['status']) => {
+    const saved = await updateQuoteStatus(id, status);
+    if (saved) {
+      dispatch({ type: 'SET_QUOTES', payload: quotes.map(q => q.id === id ? saved : q) });
+    } else {
+      dispatch({ type: 'SET_QUOTES', payload: quotes.map(q => q.id === id ? { ...q, status } : q) });
+    }
   };
 
-  const handleDeleteQuote = (id: string) => {
+  const handleDeleteQuote = async (id: string) => {
+    await deleteQuote(id);
     dispatch({ type: 'SET_QUOTES', payload: quotes.filter(q => q.id !== id) });
   };
 
-  const handleAddInvoice = (invoiceData: Omit<Invoice, 'id' | 'number'>, operator: string) => {
-    const nextNumber = `FAC-2026-${String(invoices.length + 1).padStart(3, '0')}`;
+  const handleAddInvoice = async (invoiceData: Omit<Invoice, 'id' | 'number'>, operator: string) => {
+    const year = new Date(invoiceData.date).getFullYear();
+    const nextNumber = await getNextNumber('FAC', year);
     const newInvoice: Invoice = {
       ...invoiceData,
       id: generateId('fac'),
       number: nextNumber
     };
 
-    dispatch({ type: 'SET_INVOICES', payload: [newInvoice, ...invoices] });
-
-    const updatedItems = items.map(item => {
-      const line = invoiceData.items.find(l => l.itemId === item.id);
-      if (line) {
-        return {
-          ...item,
-          stockCount: Math.max(0, item.stockCount - line.quantity)
-        };
-      }
-      return item;
-    });
-    dispatch({ type: 'SET_ITEMS', payload: updatedItems });
-
-    const newMovements: StockMovement[] = invoiceData.items.map((line, idx) => ({
-      id: `${generateId('mov')}-${idx}`,
-      itemId: line.itemId,
-      itemName: line.itemName,
-      type: 'SORTIE',
-      quantity: line.quantity,
-      reason: 'Vente Client',
-      date: invoiceData.date,
-      referenceCode: nextNumber,
-      operator
-    }));
-    dispatch({ type: 'SET_MOVEMENTS', payload: [...newMovements, ...movements] });
-
-    const unpaidAmount = invoiceData.total - invoiceData.amountPaid;
-    if (unpaidAmount > 0) {
-      const updatedCustomers = customers.map(c => {
-        if (c.id === invoiceData.customerId) {
-          return {
-            ...c,
-            outstandingBalance: c.outstandingBalance + unpaidAmount
-          };
-        }
-        return c;
-      });
-      dispatch({ type: 'SET_CUSTOMERS', payload: updatedCustomers });
-    }
+    // Stock decrement, SORTIE movements and customer balance are handled
+    // atomically by the Rust `add_invoice` command (Tauri) / adapter.
+    const saved = await addInvoice(newInvoice, operator);
+    dispatch({ type: 'SET_INVOICES', payload: [saved, ...invoices] });
   };
 
-  const handleDeleteInvoice = (id: string) => {
-    const invoiceObj = invoices.find(inv => inv.id === id);
-    if (!invoiceObj) return;
-
+  const handleDeleteInvoice = async (id: string) => {
+    // Stock restoration, movement removal and balance reversal are handled
+    // atomically by the Rust `delete_invoice` command (Tauri) / adapter.
+    await deleteInvoice(id);
     dispatch({ type: 'SET_INVOICES', payload: invoices.filter(inv => inv.id !== id) });
-
-    const restoredItems = items.map(item => {
-      const line = invoiceObj.items.find(l => l.itemId === item.id);
-      if (line) {
-        return {
-          ...item,
-          stockCount: item.stockCount + line.quantity
-        };
-      }
-      return item;
-    });
-    dispatch({ type: 'SET_ITEMS', payload: restoredItems });
-
-    dispatch({ type: 'SET_MOVEMENTS', payload: movements.filter(m => m.referenceCode !== invoiceObj.number) });
-
-    const unpaid = invoiceObj.total - invoiceObj.amountPaid;
-    if (unpaid > 0) {
-      const restoredCustomers = customers.map(c => {
-        if (c.id === invoiceObj.customerId) {
-          return {
-            ...c,
-            outstandingBalance: Math.max(0, c.outstandingBalance - unpaid)
-          };
-        }
-        return c;
-      });
-      dispatch({ type: 'SET_CUSTOMERS', payload: restoredCustomers });
-    }
   };
 
-  const handleConvertQuoteToInvoice = (
+  const handleConvertQuoteToInvoice = async (
     quote: Quote,
     paymentMethod: 'Espèces' | 'Wave' | 'Orange Money' | 'Chèque' | 'Virement',
     amountPaid: number,
     operator: string
   ) => {
-    handleAddInvoice({
-      date: new Date().toISOString().split('T')[0],
-      customerId: quote.customerId,
-      customerName: quote.customerName,
-      items: quote.items,
-      subtotal: quote.subtotal,
-      discount: quote.discount,
-      tax: quote.tax,
-      total: quote.total,
-      amountPaid,
-      paymentMethod,
-      status: amountPaid === quote.total ? 'Payé' : amountPaid === 0 ? 'Non Payé' : 'Partiel',
-      notes: `Facturé depuis le dévis ${quote.number}`,
-      quoteId: quote.id
-    }, operator);
+    const savedInvoice = await convertQuote(quote.id, paymentMethod, amountPaid, operator);
+    dispatch({ type: 'SET_INVOICES', payload: [savedInvoice, ...invoices] });
 
-    handleUpdateQuoteStatus(quote.id, 'Accepté');
+    const savedQuote = await updateQuoteStatus(quote.id, 'Accepté');
+    if (savedQuote) {
+      dispatch({ type: 'SET_QUOTES', payload: quotes.map(q => q.id === quote.id ? savedQuote : q) });
+    } else {
+      dispatch({ type: 'SET_QUOTES', payload: quotes.map(q => q.id === quote.id ? { ...q, status: 'Accepté' as Quote['status'] } : q) });
+    }
   };
 
-  const handleAddCustomer = (cData: Omit<Customer, 'id' | 'outstandingBalance'>) => {
+  const handleAddCustomer = async (cData: Omit<Customer, 'id' | 'outstandingBalance'>) => {
     const newCustomer: Customer = {
       ...cData,
       id: generateId('cust'),
       outstandingBalance: 0
     };
-    dispatch({ type: 'SET_CUSTOMERS', payload: [...customers, newCustomer] });
+    const saved = await addCustomer(newCustomer);
+    dispatch({ type: 'SET_CUSTOMERS', payload: [...customers, saved] });
   };
 
-  const handleUpdateCustomer = (cUpdated: Customer) => {
-    dispatch({ type: 'SET_CUSTOMERS', payload: customers.map(c => c.id === cUpdated.id ? cUpdated : c) });
+  const handleUpdateCustomer = async (cUpdated: Customer) => {
+    const saved = await updateCustomer(cUpdated);
+    dispatch({ type: 'SET_CUSTOMERS', payload: customers.map(c => c.id === saved.id ? saved : c) });
   };
 
-  const handleDeleteCustomer = (id: string) => {
+  const handleDeleteCustomer = async (id: string) => {
+    await deleteCustomer(id);
     dispatch({ type: 'SET_CUSTOMERS', payload: customers.filter(c => c.id !== id) });
   };
 
-  const handlePayCustomerDebt = (customerId: string, amount: number) => {
-    const updatedCustomers = customers.map(c => {
-      if (c.id === customerId) {
-        return {
-          ...c,
-          outstandingBalance: Math.max(0, c.outstandingBalance - amount)
-        };
-      }
-      return c;
-    });
-    dispatch({ type: 'SET_CUSTOMERS', payload: updatedCustomers });
-
+  const handlePayCustomerDebt = async (customerId: string, amount: number) => {
     const customerObj = customers.find(c => c.id === customerId);
     if (!customerObj) return;
 
-    const nextNumber = `REC-${Date.now().toString().slice(-6)}`;
+    const today = new Date().toISOString().split('T')[0];
+    const nextNumber = `REC-${crypto.randomUUID().slice(0, 8)}`;
     const newReceiptInvoice: Invoice = {
       id: generateId('fac'),
       number: nextNumber,
-      date: new Date().toISOString().split('T')[0],
+      date: today,
       customerId,
       customerName: customerObj.name,
       items: [],
@@ -285,31 +245,51 @@ function AppContent() {
       status: 'Payé',
       notes: `Recouvrement de créance client (Paiement crédit)`
     };
+    await addInvoice(newReceiptInvoice, 'Système');
     dispatch({ type: 'SET_INVOICES', payload: [newReceiptInvoice, ...invoices] });
+
+    const updatedCustomers = customers.map(c => {
+      if (c.id === customerId) {
+        return {
+          ...c,
+          outstandingBalance: applyDebtPayment(c.outstandingBalance, amount)
+        };
+      }
+      return c;
+    });
+    const updatedCustomer = updatedCustomers.find(c => c.id === customerId);
+    if (updatedCustomer) {
+      await updateCustomer(updatedCustomer);
+    }
+    dispatch({ type: 'SET_CUSTOMERS', payload: updatedCustomers });
   };
 
-  const handleAddSupplier = (sData: Omit<Supplier, 'id' | 'balance'>) => {
+  const handleAddSupplier = async (sData: Omit<Supplier, 'id' | 'balance'>) => {
     const newSupplier: Supplier = {
       ...sData,
       id: generateId('supp'),
       balance: 0
     };
-    dispatch({ type: 'SET_SUPPLIERS', payload: [...suppliers, newSupplier] });
+    const saved = await addSupplier(newSupplier);
+    dispatch({ type: 'SET_SUPPLIERS', payload: [...suppliers, saved] });
   };
 
-  const handleUpdateSupplier = (sUpdated: Supplier) => {
-    dispatch({ type: 'SET_SUPPLIERS', payload: suppliers.map(s => s.id === sUpdated.id ? sUpdated : s) });
+  const handleUpdateSupplier = async (sUpdated: Supplier) => {
+    const saved = await updateSupplier(sUpdated);
+    dispatch({ type: 'SET_SUPPLIERS', payload: suppliers.map(s => s.id === saved.id ? saved : s) });
   };
 
-  const handleDeleteSupplier = (id: string) => {
+  const handleDeleteSupplier = async (id: string) => {
+    await deleteSupplier(id);
     dispatch({ type: 'SET_SUPPLIERS', payload: suppliers.filter(s => s.id !== id) });
   };
 
-  const handleUpdateSettings = (newSettings: StoreSettings) => {
+  const handleUpdateSettings = async (newSettings: StoreSettings) => {
+    await saveSettings(newSettings);
     dispatch({ type: 'SET_SETTINGS', payload: newSettings });
   };
 
-  const handleRestoreAllData = (restoredData: {
+  const handleRestoreAllData = async (restoredData: {
     settings: StoreSettings;
     items: Item[];
     movements: StockMovement[];
@@ -318,6 +298,7 @@ function AppContent() {
     quotes: Quote[];
     invoices: Invoice[];
   }) => {
+    await restoreAll(restoredData);
     dispatch({ type: 'RESTORE_ALL_DATA', payload: restoredData });
   };
 

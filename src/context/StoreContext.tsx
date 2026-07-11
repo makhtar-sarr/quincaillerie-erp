@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
 import type { StoreSettings, Item, StockMovement, Customer, Supplier, Quote, Invoice } from '../types';
 import { DEFAULT_SETTINGS } from '../utils/data';
+import { isTauri, loadAll } from '../lib/storageAdapter';
 
 export interface StoreState {
   settings: StoreSettings;
@@ -98,13 +99,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(storeReducer, initialState);
 
   useEffect(() => {
-    const stored = readLocalStorage();
-    if (stored) {
-      dispatch({ type: 'LOAD_INITIAL_DATA', payload: stored });
+    if (isTauri()) {
+      loadAll().then((d) => {
+        if (d) {
+          dispatch({ type: 'LOAD_INITIAL_DATA', payload: d });
+        }
+      });
+    } else {
+      // Web fallback: read from localStorage
+      const s = readLocalStorage();
+      if (s) {
+        dispatch({ type: 'LOAD_INITIAL_DATA', payload: s });
+      }
     }
   }, []);
 
   useEffect(() => {
+    if (isTauri()) return; // Tauri mode persists via the storage adapter (no global write)
     localStorage.setItem(LS_KEYS.settings, JSON.stringify(state.settings));
     localStorage.setItem(LS_KEYS.items, JSON.stringify(state.items));
     localStorage.setItem(LS_KEYS.movements, JSON.stringify(state.movements));
