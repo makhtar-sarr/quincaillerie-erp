@@ -30,7 +30,7 @@ impl AppState {
     ///
     /// The guard must be held for the duration of DB access; callers use it
     /// within the same scope (e.g. `let conn = state.conn()?;`).
-    pub fn conn(&self) -> Result<MutexGuard<Connection>, String> {
+    pub fn conn(&self) -> Result<MutexGuard<'_, Connection>, String> {
         self.conn.lock().map_err(|e| e.to_string())
     }
 }

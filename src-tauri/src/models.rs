@@ -103,16 +103,6 @@ pub struct Invoice {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct User {
-  pub id: String,
-  pub name: String,
-  pub pin_hash: String,
-  pub role: String, // 'admin' | 'vendeur' | 'magasinier'
-  pub created_at: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
 pub struct StoreSettings {
   pub store_name: String,
   pub address: String,
@@ -122,29 +112,6 @@ pub struct StoreSettings {
   pub rc: String, // Registre du Commerce
   pub tva_rate: i64, // percentage (e.g. 18 for standard Senegal VAT)
   pub currency: String, // 'FCFA'
-}
-
-// ---- Command input structs ----
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct InvoiceInput {
-  pub invoice: Invoice,
-  pub operator: String,
-  pub kind: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct QuoteInput {
-  pub quote: Quote,
-  pub operator: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct StockMovementInput {
-  pub movement: StockMovement,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

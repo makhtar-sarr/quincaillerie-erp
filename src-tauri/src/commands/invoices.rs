@@ -158,19 +158,18 @@ pub fn convert_quote_to_invoice(
     // Load the quote header.
     let quote = tx
         .query_row(
-            "SELECT id, number, date, expiry_date, customer_id, customer_name, subtotal, discount, tax, total, status, notes FROM quotes WHERE id = ?1",
+            "SELECT id, customer_id, customer_name, subtotal, discount, tax, total, notes FROM quotes WHERE id = ?1",
             params![quote_id],
             |row| {
                 Ok(QuoteLite {
                     id: row.get(0)?,
-                    customer_id: row.get(3)?,
-                    customer_name: row.get(4)?,
-                    subtotal: row.get(6)?,
-                    discount: row.get(7)?,
-                    tax: row.get(8)?,
-                    total: row.get(9)?,
-                    status: row.get(10)?,
-                    notes: row.get(11)?,
+                    customer_id: row.get(1)?,
+                    customer_name: row.get(2)?,
+                    subtotal: row.get(3)?,
+                    discount: row.get(4)?,
+                    tax: row.get(5)?,
+                    total: row.get(6)?,
+                    notes: row.get(7)?,
                 })
             },
         )
@@ -397,7 +396,6 @@ struct QuoteLite {
     discount: i64,
     tax: i64,
     total: i64,
-    status: String,
     notes: Option<String>,
 }
 
