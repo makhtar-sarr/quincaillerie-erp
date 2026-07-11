@@ -1,23 +1,155 @@
 {
-  "active_plan": "/home/makhtar/projets/quincaillerie-erp/.sisyphus/plans/tauri-desktop-integration.md",
-  "started_at": "2026-07-07T12:29:36.427Z",
+  "active_plan": "/home/makhtar/projets/quincaillerie-erp/.sisyphus/plans/quincaillerie-tauri-sqlite.md",
+  "started_at": "2026-07-10T11:01:53.868Z",
   "session_ids": [
-    "ses_0c37913dfffeYVPyAZB4WvQHE2"
+    "ses_0b48cda1fffe1F6F4sKKZL6R1r",
+    "ses_0b36b6613ffenxih88EVhFe7MR",
+    "ses_0b36b3dcfffem5WdctWKBd1emo",
+    "ses_0b36b2141ffeh6jjCQjEdmSBbe",
+    "ses_0b36af5adffe3RlIL5T003MT9J",
+    "ses_0b351ec49ffeIj0pDdoTREKEai",
+    "ses_0b351d6d5ffei4JziqOvmLEkXv",
+    "ses_0b351bdc8ffeJ8O8y4DihWovgH",
+    "ses_0b351914fffeZ7okuMSXdZopIi",
+    "ses_0b3516bbdffend931dpFSAOuRH",
+    "ses_0b3513f89ffea3F9PEkIzYP5w9",
+    "ses_0b350fe5affeVKzhynfrzW3aAP",
+    "ses_0af98d638ffeUVck2ND10rtk5l"
   ],
   "session_origins": {
-    "ses_0c37913dfffeYVPyAZB4WvQHE2": "direct"
+    "ses_0b48cda1fffe1F6F4sKKZL6R1r": "direct",
+    "ses_0b36b6613ffenxih88EVhFe7MR": "appended",
+    "ses_0b36b3dcfffem5WdctWKBd1emo": "appended",
+    "ses_0b36b2141ffeh6jjCQjEdmSBbe": "appended",
+    "ses_0b36af5adffe3RlIL5T003MT9J": "appended",
+    "ses_0b351ec49ffeIj0pDdoTREKEai": "appended",
+    "ses_0b351d6d5ffei4JziqOvmLEkXv": "appended",
+    "ses_0b351bdc8ffeJ8O8y4DihWovgH": "appended",
+    "ses_0b351914fffeZ7okuMSXdZopIi": "appended",
+    "ses_0b3516bbdffend931dpFSAOuRH": "appended",
+    "ses_0b3513f89ffea3F9PEkIzYP5w9": "appended",
+    "ses_0b350fe5affeVKzhynfrzW3aAP": "appended",
+    "ses_0af98d638ffeUVck2ND10rtk5l": "appended"
   },
-  "plan_name": "tauri-desktop-integration",
+  "plan_name": "quincaillerie-tauri-sqlite",
   "agent": "atlas",
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "Initialize Git Repository",
-      "session_id": "ses_0c3713034ffeiHK2O76pyAYMdW",
+      "task_title": "**Cargo.toml — ajouter dépendances backend**",
+      "session_id": "ses_0b44ce886ffe7NyT5JNYmv6lzu",
       "agent": "Sisyphus-Junior",
       "category": "quick",
-      "updated_at": "2026-07-07T12:31:00.948Z"
+      "updated_at": "2026-07-10T11:04:52.141Z"
+    },
+    "todo:2": {
+      "task_key": "todo:2",
+      "task_label": "2",
+      "task_title": "**lib.rs — enregistrer AppState + commandes**",
+      "session_id": "ses_0b41660a9ffe2bHJ9jg3I82DS4",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-07-10T12:06:35.600Z"
+    },
+    "todo:9": {
+      "task_key": "todo:9",
+      "task_label": "9",
+      "task_title": "**migrate_local_storage — commande migration one-shot**",
+      "session_id": "ses_0b412d95fffeP6O7Ex4fjkb4BW",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-07-10T12:10:08.609Z"
+    },
+    "todo:19": {
+      "task_key": "todo:19",
+      "task_label": "19",
+      "task_title": "**StoreContext.tsx — chargement via adapter, retrait effet Tauri**",
+      "session_id": "ses_0b40ee97fffeLPQi8CHCq44Cpl",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-07-10T12:13:06.962Z"
+    },
+    "todo:20": {
+      "task_key": "todo:20",
+      "task_label": "20",
+      "task_title": "**App.tsx — handlers → invoke (signatures stables)**",
+      "session_id": "ses_0b40d06f1ffeEZz7RRB4TajvzW",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-07-10T12:18:10.903Z"
+    },
+    "todo:21": {
+      "task_key": "todo:21",
+      "task_label": "21",
+      "task_title": "**useIdGenerator.ts — crypto.randomUUID() avec préfixe**",
+      "session_id": "ses_0b4082808ffe4Eyk6Qildli968",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-07-10T12:20:43.964Z"
+    },
+    "todo:22": {
+      "task_key": "todo:22",
+      "task_label": "22",
+      "task_title": "**App.tsx — numérotation dynamique (année depuis date, plus 2026 hardcoded)**",
+      "session_id": "ses_0b4062237ffe6WZoo2pYs7a991",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-07-10T12:25:52.987Z"
+    },
+    "todo:23": {
+      "task_key": "todo:23",
+      "task_label": "23",
+      "task_title": "**import.ts — IDs sans Date.now + routage backend**",
+      "session_id": "ses_0b4017675ffeFa7Bx0ztMJs0oY",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-07-10T12:27:32.069Z"
+    },
+    "todo:24": {
+      "task_key": "todo:24",
+      "task_label": "24",
+      "task_title": "**useCloudBackups.ts — toast confirm + invoke backup/restore (fallback JS)**",
+      "session_id": "ses_0b3fff0d7ffelF3dlNa4nZbuSC",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-07-10T12:32:43.708Z"
+    },
+    "todo:25": {
+      "task_key": "todo:25",
+      "task_label": "25",
+      "task_title": "**Rust tests — transactions + numérotation + CRUD**",
+      "session_id": "ses_0b3fb483effeFq9gfLKp4PQqq4",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-07-10T12:53:36.051Z"
+    },
+    "todo:26": {
+      "task_key": "todo:26",
+      "task_label": "26",
+      "task_title": "**Vitest setup + extraction helpers purs (calc.ts, numbering.ts)**",
+      "session_id": "ses_0b37d26d8ffe24418xqJpDC856",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-07-10T15:03:34.735Z"
+    },
+    "todo:27": {
+      "task_key": "todo:27",
+      "task_label": "27",
+      "task_title": "**Vitest tests — ID unique, calculs, dettes**",
+      "session_id": "ses_0b3723b21ffe9nqfN5cfOPnI5q",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-07-10T15:10:09.746Z"
+    },
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "**Plan Compliance Audit** — `oracle`",
+      "session_id": "ses_0af98d638ffeUVck2ND10rtk5l",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-07-11T08:59:26.558Z"
     }
   }
 }
